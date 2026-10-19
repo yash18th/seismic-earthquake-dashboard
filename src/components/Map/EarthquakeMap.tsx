@@ -170,6 +170,10 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
         onSelectEvent(event);
       });
 
+      circle.on('mouseover', () => {
+        circle.bringToFront();
+      });
+
       circle.addTo(group);
       markersMapRef.current.set(event.id, circle);
     });
@@ -187,8 +191,11 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
       easeLinearity: 0.25,
     });
 
-    if (marker && !marker.isPopupOpen()) {
-      marker.openPopup();
+    if (marker) {
+      marker.bringToFront();
+      if (!marker.isPopupOpen()) {
+        marker.openPopup();
+      }
     }
   }, [selectedEvent]);
 

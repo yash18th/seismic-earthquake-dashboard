@@ -44,9 +44,6 @@ export const App: React.FC = () => {
     refresh,
   } = useEarthquakeData(filterState);
 
-  // Compute overall dataset KPIs from currently loaded valid events
-  const kpis = useMemo(() => calculateKpis(events), [events]);
-
   // Apply client-side filters (text search by place/title, sorting, significant only toggle)
   const filteredEvents = useMemo(() => {
     return filterAndSortEvents(
@@ -65,6 +62,9 @@ export const App: React.FC = () => {
     filterState.sortBy,
     filterState.significantOnly,
   ]);
+
+  // Compute dataset KPIs from currently filtered view for strict consistency across components
+  const kpis = useMemo(() => calculateKpis(filteredEvents), [filteredEvents]);
 
   // Find currently selected event
   const selectedEvent = useMemo(() => {

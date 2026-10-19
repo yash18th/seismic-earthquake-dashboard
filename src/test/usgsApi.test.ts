@@ -170,6 +170,29 @@ describe('USGS API Service & Normalization', () => {
       expect(normalized!.alert).toBe('green');
     });
 
+    it('correctly preserves authentic negative depths (above sea level seismic origins)', () => {
+      const rawFeature = {
+        type: 'Feature',
+        id: 'us_mountain_quake',
+        properties: {
+          mag: 2.7,
+          place: 'Mauna Kea Summit, HI',
+          time: 1729300000000,
+          updated: 1729305000000,
+          url: '',
+          title: 'M 2.7 - Mauna Kea Summit, HI',
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [-155.468, 19.820, -1.346],
+        },
+      } as unknown as UsgsGeoJsonFeature;
+
+      const normalized = normalizeUsgsFeature(rawFeature);
+      expect(normalized).not.toBeNull();
+      expect(normalized!.coordinates?.depthKm).toBe(-1.35); // rounded to 2 decimal places, preserving negative
+    });
+
     it('handles missing/null coordinates and magnitude gracefully without throwing', () => {
       const rawFeature = {
         type: 'Feature',

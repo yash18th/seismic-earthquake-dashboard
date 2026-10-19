@@ -2,7 +2,7 @@ import type { EarthquakeEvent, HourlyCountBucket, MagnitudeBinBucket } from '../
 
 /**
  * Generate time-bucketed counts for the seismic activity timeline.
- * Correctly handles UTC buckets and chronological ordering.
+ * Correctly handles UTC buckets, chronologically sorted, with invalid timestamp protection.
  */
 export function generateTimelineData(
   events: EarthquakeEvent[],
@@ -12,10 +12,11 @@ export function generateTimelineData(
     return [];
   }
 
-  // Find min and max timestamps
-  const timestamps = events.map((e) => e.time).filter((t) => !isNaN(t) && t > 0);
-  if (timestamps.length === 0) return [];
+  // Filter valid positive timestamps
+  const validEvents = events.filter((e) => typeof e.time === 'number' && !isNaN(e.time) && e.time > 0);
+  if (validEvents.length === 0) return [];
 
+  const timestamps = validEvents.map((e) => e.time);
   const minTime = Math.min(...timestamps);
   const maxTime = Math.max(...timestamps);
 
@@ -26,8 +27,7 @@ export function generateTimelineData(
 
   const bucketsMap = new Map<number, { count: number; maxMag: number | null }>();
 
-  // Initialize all buckets in range to prevent gaps
-  // Limit to at most 72 buckets to prevent chart overcrowding
+  // Initialize all buckets in range to prevent gaps (cap to at most 72 intervals)
   const step = Math.max(1, Math.ceil((endBucket - startBucket) / (bucketMs * 48)));
   const effectiveBucketMs = bucketMs * step;
 
@@ -36,21 +36,20 @@ export function generateTimelineData(
   }
 
   // Populate counts
-  for (const event of events) {
+  for (const event of validEvents) {
     const bucketTime = Math.floor(event.time / effectiveBucketMs) * effectiveBucketMs;
     const bucket = bucketsMap.get(bucketTime);
     if (bucket) {
       bucket.count += 1;
-      if (event.magnitude !== null) {
+      if (event.magnitude !== null && !isNaN(event.magnitude)) {
         if (bucket.maxMag === null || event.magnitude > bucket.maxMag) {
           bucket.maxMag = event.magnitude;
         }
       }
     } else {
-      // In case edge boundary falls outside
       bucketsMap.set(bucketTime, {
         count: 1,
-        maxMag: event.magnitude,
+        maxMag: event.magnitude !== null && !isNaN(event.magnitude) ? event.magnitude : null,
       });
     }
   }
@@ -62,7 +61,7 @@ export function generateTimelineData(
     const bucket = bucketsMap.get(time)!;
     const date = new Date(time);
 
-    // Format UTC label (e.g., "14:00" or "Oct 19 14:00")
+    // Format UTC label (e.g., "14:00" or "Oct 19")
     const hourLabel =
       effectiveBucketMs >= 24 * 3600 * 1000
         ? new Intl.DateTimeFormat('en-US', {
@@ -90,16 +89,30 @@ export function generateTimelineData(
 
 /**
  * Generate magnitude distribution histogram buckets.
+ * Dynamically supports sub-2.5 microseisms when present in query results.
+ * Excludes missing/null magnitudes from energy classification.
  */
 export function generateMagnitudeDistribution(events: EarthquakeEvent[]): MagnitudeBinBucket[] {
-  const bins: MagnitudeBinBucket[] = [
+  if (!events || events.length === 0) {
+    return [];
+  }
+
+  const hasSub25 = events.some((e) => e.magnitude !== null && !isNaN(e.magnitude) && e.magnitude < 2.5);
+
+  const bins: MagnitudeBinBucket[] = [];
+
+  if (hasSub25) {
+    bins.push({ rangeLabel: '< M 2.5', minMag: -Infinity, maxMag: 2.499, count: 0 });
+  }
+
+  bins.push(
     { rangeLabel: 'M 2.5–3.4', minMag: 2.5, maxMag: 3.499, count: 0 },
     { rangeLabel: 'M 3.5–4.4', minMag: 3.5, maxMag: 4.499, count: 0 },
     { rangeLabel: 'M 4.5–5.4', minMag: 4.5, maxMag: 5.499, count: 0 },
     { rangeLabel: 'M 5.5–6.4', minMag: 5.5, maxMag: 6.499, count: 0 },
     { rangeLabel: 'M 6.5–7.4', minMag: 6.5, maxMag: 7.499, count: 0 },
-    { rangeLabel: 'M 7.5+', minMag: 7.5, maxMag: 10.0, count: 0 },
-  ];
+    { rangeLabel: 'M 7.5+', minMag: 7.5, maxMag: 100.0, count: 0 }
+  );
 
   for (const ev of events) {
     if (ev.magnitude === null || isNaN(ev.magnitude)) continue;

@@ -176,7 +176,7 @@ export function getDepthCategory(depthKm: number | null | undefined): {
   }
 
   if (depthKm < 70) {
-    return { label: 'Shallow (0–70 km)', colorHex: '#38bdf8', badgeClass: 'text-sky-300 bg-sky-950/50 border-sky-800/50' };
+    return { label: 'Shallow (<70 km)', colorHex: '#38bdf8', badgeClass: 'text-sky-300 bg-sky-950/50 border-sky-800/50' };
   }
   if (depthKm < 300) {
     return { label: 'Intermediate (70–300 km)', colorHex: '#a855f7', badgeClass: 'text-purple-300 bg-purple-950/50 border-purple-800/50' };

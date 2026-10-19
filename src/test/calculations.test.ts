@@ -87,6 +87,19 @@ describe('Seismic KPI Calculations & Statistical Engineering', () => {
     expect(kpis.averageMagnitude).toBeNull();
     expect(kpis.significantCount).toBe(0);
   });
+
+  it('correctly classifies negative depths (volcano/mountain summits) as shallow earthquakes (< 70km)', () => {
+    const events: EarthquakeEvent[] = [
+      createMockEvent('1', 3.1, 'Mauna Loa Summit', 1000, -1.8),
+      createMockEvent('2', 4.5, 'Mount St Helens Crater', 2000, -0.4),
+      createMockEvent('3', 5.0, 'Deep Trench', 3000, 350),
+    ];
+
+    const kpis = calculateKpis(events);
+    expect(kpis.totalCount).toBe(3);
+    // Both -1.8 and -0.4 are < 70 km, so shallowCount should be 2
+    expect(kpis.shallowCount).toBe(2);
+  });
 });
 
 describe('Filtering and Sorting Logic', () => {

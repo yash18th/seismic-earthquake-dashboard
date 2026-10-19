@@ -130,7 +130,7 @@ export function normalizeUsgsFeature(
       coordinates = {
         longitude: lon,
         latitude: lat,
-        depthKm: Math.max(0, depth),
+        depthKm: Number(depth.toFixed(2)),
       };
     }
   }
