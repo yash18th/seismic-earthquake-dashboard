@@ -44,19 +44,22 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
         attributionControl: true,
       });
 
-      // Default dark Carto tile layer
-      const darkLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 19,
-        }
-      );
+      // Official OpenStreetMap raster tile service (No API key required)
+      const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+        minZoom: 1.5,
+        className: 'dark-tiles',
+        crossOrigin: true,
+      });
 
-      darkLayer.addTo(map);
-      tileLayerRef.current = darkLayer;
+      osmLayer.on('tileerror', (err) => {
+        console.warn('OpenStreetMap tile error notification:', err);
+      });
+
+      osmLayer.addTo(map);
+      tileLayerRef.current = osmLayer;
 
       const markersGroup = L.layerGroup().addTo(map);
       markersGroupRef.current = markersGroup;
@@ -71,25 +74,24 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
     };
   }, []);
 
-  // Handle tile switch
+  // Handle tile theme switch between Dark OSM and Natural OSM
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
 
     mapInstanceRef.current.removeLayer(tileLayerRef.current);
 
-    const newLayer =
-      tileMode === 'dark'
-        ? L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19,
-          })
-        : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
-          });
+    const newLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      minZoom: 1.5,
+      className: tileMode === 'dark' ? 'dark-tiles' : '',
+      crossOrigin: true,
+    });
+
+    newLayer.on('tileerror', (err) => {
+      console.warn('OpenStreetMap tile error notification:', err);
+    });
 
     newLayer.addTo(mapInstanceRef.current);
     tileLayerRef.current = newLayer;
@@ -254,16 +256,16 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
           <Globe className="w-4 h-4" />
         </button>
 
-        {/* Tile Layer Toggle */}
+        {/* Tile Theme Toggle */}
         <button
           type="button"
           onClick={() => setTileMode((prev) => (prev === 'dark' ? 'osm' : 'dark'))}
-          title={`Switch map layer (currently ${tileMode === 'dark' ? 'Dark Carto' : 'OpenStreetMap'})`}
+          title={`Switch map styling (currently ${tileMode === 'dark' ? 'Dark Mode OSM' : 'Standard Daylight OSM'})`}
           className="p-1.5 rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 text-xs"
-          aria-label="Toggle map tile layer"
+          aria-label="Toggle map tile styling"
         >
           <Layers className="w-4 h-4" />
-          <span className="text-[11px] hidden sm:inline">{tileMode === 'dark' ? 'Dark' : 'OSM'}</span>
+          <span className="text-[11px] hidden sm:inline">{tileMode === 'dark' ? 'Dark OSM' : 'Natural OSM'}</span>
         </button>
 
         {/* Toggle Legend */}

@@ -51,7 +51,7 @@ USGS FDSN Event Web Service (https://earthquake.usgs.gov/fdsnws/event/1/query)
   [KpiCards.tsx]    [EarthquakeMap.tsx] [ChartsSection.tsx]
   Total, Max Mag,   Leaflet Circle      Recharts Hourly
   Mean Mag, Sig     Markers [Lat, Lon]  Timeline & Magnitude
-  (M ≥ 4.5 defined) OpenStreetMap/Carto Distribution Bins
+  (M ≥ 4.5 defined) OpenStreetMap Tiles Distribution Bins
          │                 │                 │
          └─────────────────┼─────────────────┘
                            ▼

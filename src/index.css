@@ -38,6 +38,12 @@ code, kbd, samp, pre {
   border-radius: inherit;
 }
 
+/* Dark cartographic filter for official OpenStreetMap raster tiles */
+.leaflet-tile.dark-tiles,
+.dark-tiles .leaflet-tile {
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(92%);
+}
+
 .leaflet-popup-content-wrapper {
   background: #0f172a !important;
   color: #f1f5f9 !important;

@@ -210,7 +210,7 @@ export const App: React.FC = () => {
               <span>USGS API Documentation</span>
             </a>
             <span>&bull;</span>
-            <span>Map tiles &copy; OpenStreetMap contributors &copy; CARTO</span>
+            <span>Map tiles &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="hover:text-cyan-400">OpenStreetMap</a> contributors</span>
             <span>&bull;</span>
             <button
               type="button"

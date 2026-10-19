@@ -10,7 +10,7 @@ Built with **React**, **TypeScript**, **Vite**, **Tailwind CSS**, **Leaflet**, a
 
 - **Official USGS FDSN Web Service Integration:** Real-time GeoJSON queries with no mock, synthetic, or fabricated data.
 - **Scientific Dark Navy Design:** Designed with a refined dark telemetry interface (`#070b14`), high-contrast data cards, and restrained amber/red severity indicators.
-- **Interactive Geospatial World Map:** Leaflet map with OpenStreetMap & CARTO dark tiles, circle markers scaled dynamically by magnitude, depth color coding, and interactive popups.
+- **Interactive Geospatial World Map:** Leaflet map with official OpenStreetMap tiles, dark cartographic styling, circle markers scaled dynamically by magnitude, depth color coding, and interactive popups.
 - **Dynamic KPI Telemetry:**
   - Total Earthquakes in active window
   - Strongest Recorded Magnitude (Peak)
@@ -45,7 +45,7 @@ Built with **React**, **TypeScript**, **Vite**, **Tailwind CSS**, **Leaflet**, a
 | **Framework** | [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
 | **Build Tool** | [Vite 8](https://vite.dev/) |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) with `@tailwindcss/vite` |
-| **Mapping** | [Leaflet](https://leafletjs.com/) with OpenStreetMap & CARTO Dark Tiles |
+| **Mapping** | [Leaflet](https://leafletjs.com/) with Official OpenStreetMap Tiles |
 | **Data Visualization**| [Recharts](https://recharts.org/) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
 | **Testing** | [Vitest](https://vitest.dev/) + [React Testing Library](https://testing-library.com/) + `jsdom` |
