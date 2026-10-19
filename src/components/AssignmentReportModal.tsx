@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, CheckCircle2, Shield, Database, Cpu, Terminal, Sliders, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle2, Shield, Database, Cpu, Terminal, Sliders, AlertTriangle, Download } from 'lucide-react';
 
 interface AssignmentReportModalProps {
   isOpen: boolean;
@@ -49,14 +49,26 @@ export const AssignmentReportModal: React.FC<AssignmentReportModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-            aria-label="Close assignment report modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/Earthquake-Dashboard-LLM-Usage-and-Verification-Report-FINAL.pdf"
+              target="_blank"
+              rel="noreferrer"
+              download="Earthquake-Dashboard-LLM-Usage-and-Verification-Report-FINAL.pdf"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download 1-Page PDF</span>
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              aria-label="Close assignment report modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Report Content */}
