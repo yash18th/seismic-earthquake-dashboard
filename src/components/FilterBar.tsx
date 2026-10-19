@@ -169,7 +169,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               id="start-date"
               type="datetime-local"
               value={filterState.customStartTime ? filterState.customStartTime.substring(0, 16) : ''}
-              onChange={(e) => onFilterChange({ customStartTime: new Date(e.target.value).toISOString() })}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) {
+                  onFilterChange({ customStartTime: '' });
+                  return;
+                }
+                const parsed = new Date(val);
+                if (!isNaN(parsed.getTime())) {
+                  onFilterChange({ customStartTime: parsed.toISOString() });
+                }
+              }}
               className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200"
             />
           </div>
@@ -179,7 +189,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               id="end-date"
               type="datetime-local"
               value={filterState.customEndTime ? filterState.customEndTime.substring(0, 16) : ''}
-              onChange={(e) => onFilterChange({ customEndTime: new Date(e.target.value).toISOString() })}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) {
+                  onFilterChange({ customEndTime: '' });
+                  return;
+                }
+                const parsed = new Date(val);
+                if (!isNaN(parsed.getTime())) {
+                  onFilterChange({ customEndTime: parsed.toISOString() });
+                }
+              }}
               className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200"
             />
           </div>

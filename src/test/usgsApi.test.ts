@@ -75,6 +75,22 @@ describe('USGS API Service & Normalization', () => {
       const diffDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
       expect(Math.round(diffDays)).toBe(7);
     });
+
+    it('handles valid custom time window', () => {
+      const customStart = '2026-10-01T00:00:00.000Z';
+      const customEnd = '2026-10-05T00:00:00.000Z';
+      const { starttime, endtime } = calculateTimeWindow('custom', customStart, customEnd);
+      expect(starttime).toBe(customStart);
+      expect(endtime).toBe(customEnd);
+    });
+
+    it('falls back to default 24h when custom dates are invalid', () => {
+      const { starttime, endtime } = calculateTimeWindow('custom', 'invalid-date', '');
+      const startMs = new Date(starttime).getTime();
+      const endMs = new Date(endtime).getTime();
+      const diffHours = (endMs - startMs) / (1000 * 60 * 60);
+      expect(Math.round(diffHours)).toBe(24);
+    });
   });
 
   describe('validateGeoJsonResponse', () => {

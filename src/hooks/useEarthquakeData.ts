@@ -78,7 +78,7 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
       if (isManualRefresh) {
         setIsRefreshing(true);
       } else {
-        setIsLoading(true);
+        setIsLoading((prev) => (!prev ? true : prev));
       }
 
       const params = buildCurrentQueryParams();
@@ -122,7 +122,11 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
 
   // Trigger data load when server-side filter params change
   useEffect(() => {
-    loadData(false);
+    const fetchData = async () => {
+      await loadData(false);
+    };
+
+    void fetchData();
 
     return () => {
       if (abortControllerRef.current) {

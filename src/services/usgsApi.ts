@@ -52,10 +52,14 @@ export function calculateTimeWindow(
   const endtime = now.toISOString();
 
   if (preset === 'custom' && customStart && customEnd) {
-    return {
-      starttime: new Date(customStart).toISOString(),
-      endtime: new Date(customEnd).toISOString(),
-    };
+    const startDate = new Date(customStart);
+    const endDate = new Date(customEnd);
+    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+      return {
+        starttime: startDate.toISOString(),
+        endtime: endDate.toISOString(),
+      };
+    }
   }
 
   const startDate = new Date(now.getTime());

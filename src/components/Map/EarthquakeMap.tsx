@@ -31,7 +31,10 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    if (!mapInstanceRef.current) {
+    if (!mapInstanceRef.current && mapContainerRef.current) {
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        delete (mapContainerRef.current as any)._leaflet_id;
+      }
       const map = L.map(mapContainerRef.current, {
         center: [20, 0],
         zoom: 2,
