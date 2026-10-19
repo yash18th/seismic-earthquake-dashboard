@@ -29,6 +29,18 @@ export function buildUsgsApiUrl(params: UsgsQueryParams): string {
   if (params.maxmagnitude !== undefined && params.maxmagnitude !== null && params.maxmagnitude < 10) {
     url.searchParams.set('maxmagnitude', String(params.maxmagnitude));
   }
+  if (params.minlatitude !== undefined && params.minlatitude !== null) {
+    url.searchParams.set('minlatitude', String(params.minlatitude));
+  }
+  if (params.maxlatitude !== undefined && params.maxlatitude !== null) {
+    url.searchParams.set('maxlatitude', String(params.maxlatitude));
+  }
+  if (params.minlongitude !== undefined && params.minlongitude !== null) {
+    url.searchParams.set('minlongitude', String(params.minlongitude));
+  }
+  if (params.maxlongitude !== undefined && params.maxlongitude !== null) {
+    url.searchParams.set('maxlongitude', String(params.maxlongitude));
+  }
   if (params.limit !== undefined && params.limit !== null && params.limit > 0) {
     url.searchParams.set('limit', String(params.limit));
   }

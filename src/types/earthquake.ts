@@ -92,6 +92,8 @@ export interface EarthquakeEvent {
 
 export type TimeRangePreset = '1h' | '24h' | '7d' | '30d' | 'custom';
 
+export type RegionPreset = 'global' | 'asia' | 'india';
+
 export type SortOption = 'newest' | 'oldest' | 'strongest' | 'weakest';
 
 export interface UsgsQueryParams {
@@ -100,11 +102,16 @@ export interface UsgsQueryParams {
   endtime?: string;
   minmagnitude?: number;
   maxmagnitude?: number;
+  minlatitude?: number;
+  maxlatitude?: number;
+  minlongitude?: number;
+  maxlongitude?: number;
   limit?: number;
   orderby?: 'time' | 'time-asc' | 'magnitude' | 'magnitude-asc';
 }
 
 export interface DashboardFilterState {
+  region: RegionPreset;
   timePreset: TimeRangePreset;
   customStartTime: string;
   customEndTime: string;

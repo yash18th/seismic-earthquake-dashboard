@@ -4,12 +4,23 @@ An interactive, production-quality earthquake monitoring dashboard powered by li
 
 Built with **React**, **TypeScript**, **Vite**, **Tailwind CSS**, **Leaflet**, and **Recharts**.
 
+> **Scientific Disclosure:** SEISMIC monitors and analyzes historically recorded earthquakes using authoritative USGS data. It does not predict future earthquakes.
+
 ---
 
 ## ⚡ Highlights & Features
 
-- **Official USGS FDSN Web Service Integration:** Real-time GeoJSON queries with no mock, synthetic, or fabricated data.
-- **Scientific Dark Navy Design:** Designed with a refined dark telemetry interface (`#070b14`), high-contrast data cards, and restrained amber/red severity indicators.
+- **Official USGS FDSN Web Service Integration:** Real-time GeoJSON queries with zero mock, synthetic, or fabricated data.
+- **Geographic Boundary Intelligence (Global, Asia, India):**
+  - **Global:** Unrestricted worldwide seismic activity.
+  - **Asia:** Continental boundary encompassing East, South, Southeast, Central, and West Asia.
+  - **India:** Exact geodetic multi-polygon covering mainland India, Jammu & Kashmir, Ladakh, Gujarat, the Northeast, and island territories (Andaman & Nicobar Islands, Lakshadweep).
+  - **Anti-False-Positive Engine:** Solves text-match ambiguities by strictly excluding oceanic features like the **Mid-Indian Ridge** ($-10^\circ\text{ S}$ to $-45^\circ\text{ S}$) from India.
+- **Organized 4-Row Filter Architecture:**
+  - **Row 1:** Region selector (`Global`, `Asia`, `India`), search field with clear trigger, sort dropdown (by origin time or magnitude), and reset button.
+  - **Row 2:** Time-range presets (`Past 1 Hr`, `Past 24 Hrs`, `Past 7 Days`, `Past 30 Days`, `Custom Range`) with UTC pickers.
+  - **Row 3:** Minimum magnitude, maximum magnitude bounds, and significant-event toggle ($M \ge 4.5$).
+  - **Row 4:** Three-tier results breakdown: API Returned Count, Region Matches, and Displayed Count.
 - **Interactive Geospatial World Map:** Leaflet map with official OpenStreetMap tiles, dark cartographic styling, circle markers scaled dynamically by magnitude, depth color coding, and interactive popups.
 - **Dynamic KPI Telemetry:**
   - Total Earthquakes in active window
@@ -17,19 +28,13 @@ Built with **React**, **TypeScript**, **Vite**, **Tailwind CSS**, **Leaflet**, a
   - Average Magnitude (excluding nulls, formatted to 2 decimals)
   - Significant Events count (explicitly defined dashboard threshold: $M \ge 4.5$)
   - Shallow Focus (<70 km) and Tsunami Flag sub-counters
-- **Parametric Filtering & Text Search:**
-  - Server-side time presets (Past 1 Hour, Past 24 Hours, Past 7 Days, Past 30 Days, Custom Range)
-  - Minimum magnitude filtering (M 1.0+, 2.5+, 3.5+, 4.5+, 5.5+, 6.5+)
-  - In-memory text search by region, country, or location
-  - Multi-criteria sorting (Newest, Oldest, Strongest, Weakest)
-  - Result limit controls and quick filter reset
 - **Data Analytics & Visualizations:**
-  - Event Frequency Timeline (hourly UTC buckets)
-  - Magnitude Distribution Histogram (energy bin analysis)
+  - Event Frequency Timeline (hourly UTC buckets with zero-fill continuity)
+  - Magnitude Distribution Histogram (energy bin analysis, dynamically prepending `< M 2.5` microseisms when queried)
 - **Comprehensive Event Table & Telemetry Drawer:**
-  - Sortable columns (Magnitude, Time) with pagination
+  - Sortable columns (Magnitude, Origin Time) with pagination
+  - Visual status distinction: `Reviewed` by human seismologist vs `Automatic` preliminary sensor solution
   - Deep telemetry slide-over drawer synchronized across map markers and table rows
-  - One-click copy for USGS Event IDs and direct links to official USGS event pages
 - **Network Resilience & Stale Data Retention:**
   - In-flight request cancellation via native `AbortController`
   - Graceful degradation: Preserves previously loaded valid records as stale during network issues
@@ -72,7 +77,7 @@ npm run dev
 Open your browser at [http://127.0.0.1:5173](http://127.0.0.1:5173).
 
 ### 3. Running Automated Tests
-Execute the 56-test suite covering API construction, GeoJSON normalization, authentic negative depth preservation, timeline & magnitude aggregations, KPI math, and UI components:
+Execute the 71-test suite covering geographic boundaries, API query construction, GeoJSON normalization, authentic negative depth preservation, timeline & magnitude aggregations, KPI math, and UI components:
 ```bash
 npm run test
 ```
@@ -81,9 +86,10 @@ To run tests in interactive watch mode:
 npm run test:watch
 ```
 
-### 4. Production Build & Preview
-Compile the optimized production bundle and preview it locally:
+### 4. Code Quality & Production Build
+Run static linting and compile the optimized production bundle:
 ```bash
+npm run lint
 npm run build
 npm run preview
 ```
@@ -107,21 +113,22 @@ seismic-earthquake-dashboard/
     ├── hooks/
     │   └── useEarthquakeData.ts# Reactive data hook, polling, stale state retention
     ├── utils/
-    │   ├── calculations.ts     # KPI arithmetic, filtering, and sorting
+    │   ├── calculations.ts     # KPI arithmetic, filtering, and origin-time sorting
+    │   ├── geoBoundaries.ts    # Ray-casting point-in-polygon tests, India/Asia boundaries
     │   ├── formatters.ts       # Date, depth, coordinate, and severity formatters
     │   └── aggregation.ts      # Timeline & histogram binning for Recharts
     ├── components/
-    │   ├── Header.tsx          # Branding, connection badge, last sync, refresh
+    │   ├── Header.tsx          # Branding, query window badge, connection, refresh
     │   ├── KpiCards.tsx        # 4 KPI cards & telemetry sub-counters
-    │   ├── FilterBar.tsx       # Search, time window, min mag, and sorting
+    │   ├── FilterBar.tsx       # 4-row layout: region, search, sort, presets, magnitude
     │   ├── AssignmentReportModal.tsx # In-app report viewer modal
     │   ├── Map/
-    │   │   ├── EarthquakeMap.tsx # Leaflet world map with circle markers
+    │   │   ├── EarthquakeMap.tsx # Leaflet world map with circle markers & region viewports
     │   │   └── MapLegend.tsx   # Magnitude and depth color legend
     │   ├── Analytics/
     │   │   └── ChartsSection.tsx # Frequency timeline & magnitude distribution
     │   ├── EventTable/
-    │   │   ├── EventTable.tsx  # Sortable table with detail buttons
+    │   │   ├── EventTable.tsx  # Sortable table with reviewed/automatic badges
     │   │   └── TablePagination.tsx # Rows per page & pagination controls
     │   ├── EventDetails/
     │   │   └── EventDetailPanel.tsx # Slide-out telemetry drawer
@@ -130,10 +137,11 @@ seismic-earthquake-dashboard/
     └── test/
         ├── setup.ts            # Test setup with @testing-library/jest-dom
         ├── usgsApi.test.ts     # API service, URL params, and GeoJSON tests
+        ├── geoBoundaries.test.ts # India/Asia polygon, Mid-Indian Ridge exclusion tests
         ├── calculations.test.ts# KPI calculations, null handling, filter tests
         ├── aggregation.test.ts # Timeline hourly bucketing & histogram tests
         ├── formatters.test.ts  # String, depth, coordinate, and color tests
-        └── components.test.tsx # Unit tests for Header, KPIs, Table, and Drawer
+        └── components.test.tsx # Unit tests for Header, KPIs, FilterBar, and Table
 ```
 
 ---
@@ -144,8 +152,9 @@ The dashboard queries the official USGS FDSN Web Service directly:
 `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson`
 
 Verification was conducted by executing identical queries via `curl` and comparing with the dashboard's parsed state:
-- Event IDs, timestamps, coordinates, and depth values match official records with zero deviation.
+- Event IDs, origin timestamps, coordinates, and depth values match official records with zero deviation.
 - Maximum and average magnitude formulas exclude nulls and missing values, displaying `N/A` instead of zero.
 - Empty query responses (`{"features": []}`) are caught gracefully without application crash.
+- Region filtering correctly separates geographic inclusion from simple place text matches.
 
 For detailed test logs, query parameters, and comparison tables, refer to [`ASSIGNMENT_REPORT.md`](./ASSIGNMENT_REPORT.md).

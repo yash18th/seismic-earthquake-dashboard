@@ -1,13 +1,15 @@
-import type { EarthquakeEvent, DashboardKpis } from '../types/earthquake';
+import type { EarthquakeEvent, DashboardKpis, RegionPreset } from '../types/earthquake';
 import { SIGNIFICANT_MAGNITUDE_THRESHOLD } from './formatters';
+import { isEventInRegion } from './geoBoundaries';
 
 /**
- * Calculate KPI metrics from the currently loaded earthquake records.
+ * Calculate KPI metrics from the currently filtered earthquake records.
  * 
  * Rules:
  * - Excludes missing, null, undefined, or NaN magnitudes from calculations.
  * - If no valid magnitudes exist, strongestMagnitude and averageMagnitude are null (rendered as "N/A", never 0).
- * - Explicit threshold: Significant events are defined as events with magnitude >= 4.5 (SEISMIC operational threshold).
+ * - Explicit threshold: Significant events are defined as events with magnitude >= 4.5.
+ * - Descriptive statistics only; does not predict future seismic events.
  */
 export function calculateKpis(
   events: EarthquakeEvent[],
@@ -72,7 +74,19 @@ export function calculateKpis(
 }
 
 /**
+ * Filter events by geographic region boundary.
+ */
+export function filterEventsByRegion(
+  events: EarthquakeEvent[],
+  region: RegionPreset = 'global'
+): EarthquakeEvent[] {
+  if (region === 'global') return events;
+  return events.filter((ev) => isEventInRegion(ev, region));
+}
+
+/**
  * Filter and sort earthquake events.
+ * Correctly applies geographic boundary validation, query search, magnitude threshold, and origin-time sorting.
  */
 export function filterAndSortEvents(
   events: EarthquakeEvent[],
@@ -81,12 +95,18 @@ export function filterAndSortEvents(
   maxMag: number,
   sortBy: 'newest' | 'oldest' | 'strongest' | 'weakest',
   significantOnly: boolean = false,
+  region: RegionPreset = 'global',
   significantThreshold: number = SIGNIFICANT_MAGNITUDE_THRESHOLD
 ): EarthquakeEvent[] {
   const query = searchQuery.trim().toLowerCase();
 
   const filtered = events.filter((ev) => {
-    // Client-side text search by place or title
+    // 1. Geographic boundary test (prevents "Mid-Indian Ridge" matching India)
+    if (!isEventInRegion(ev, region)) {
+      return false;
+    }
+
+    // 2. Client-side text search by place, title, or ID
     if (query) {
       const matchPlace = ev.place.toLowerCase().includes(query);
       const matchTitle = ev.title.toLowerCase().includes(query);
@@ -96,13 +116,13 @@ export function filterAndSortEvents(
       }
     }
 
-    // Magnitude range check (exclude if defined and out of range)
+    // 3. Magnitude range check (exclude if defined and out of range)
     if (ev.magnitude !== null && ev.magnitude !== undefined) {
       if (ev.magnitude < minMag) return false;
       if (maxMag < 10 && ev.magnitude > maxMag) return false;
     }
 
-    // Significant events filter toggle
+    // 4. Significant events filter toggle
     if (significantOnly) {
       if (ev.magnitude === null || ev.magnitude < significantThreshold) {
         return false;
@@ -116,7 +136,7 @@ export function filterAndSortEvents(
 }
 
 /**
- * Sort earthquake events cleanly.
+ * Sort earthquake events cleanly using event origin time (not retrieval time).
  */
 export function sortEvents(
   events: EarthquakeEvent[],

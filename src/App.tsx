@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { DashboardFilterState, EarthquakeEvent } from './types/earthquake';
 import { useEarthquakeData } from './hooks/useEarthquakeData';
-import { calculateKpis, filterAndSortEvents } from './utils/calculations';
+import { calculateKpis, filterAndSortEvents, filterEventsByRegion } from './utils/calculations';
 import { Header } from './components/Header';
 import { KpiCards } from './components/KpiCards';
 import { FilterBar } from './components/FilterBar';
@@ -14,6 +14,7 @@ import { AssignmentReportModal } from './components/AssignmentReportModal';
 import { ShieldCheck, Database } from 'lucide-react';
 
 const INITIAL_FILTER_STATE: DashboardFilterState = {
+  region: 'global',
   timePreset: '24h',
   customStartTime: '',
   customEndTime: '',
@@ -44,7 +45,12 @@ export const App: React.FC = () => {
     refresh,
   } = useEarthquakeData(filterState);
 
-  // Apply client-side filters (text search by place/title, sorting, significant only toggle)
+  // Geographic boundary pre-matched events within selected region
+  const geoMatchedEvents = useMemo(() => {
+    return filterEventsByRegion(events, filterState.region);
+  }, [events, filterState.region]);
+
+  // Apply client-side filters (geographic boundary, text search, magnitude bounds, sorting, significant toggle)
   const filteredEvents = useMemo(() => {
     return filterAndSortEvents(
       events,
@@ -52,7 +58,8 @@ export const App: React.FC = () => {
       filterState.minMagnitude,
       filterState.maxMagnitude,
       filterState.sortBy,
-      filterState.significantOnly
+      filterState.significantOnly,
+      filterState.region
     );
   }, [
     events,
@@ -61,6 +68,7 @@ export const App: React.FC = () => {
     filterState.maxMagnitude,
     filterState.sortBy,
     filterState.significantOnly,
+    filterState.region,
   ]);
 
   // Compute dataset KPIs from currently filtered view for strict consistency across components
@@ -121,6 +129,9 @@ export const App: React.FC = () => {
         onRefresh={refresh}
         onOpenReport={() => setIsReportOpen(true)}
         totalLoaded={events.length}
+        timePreset={filterState.timePreset}
+        customStartTime={filterState.customStartTime}
+        customEndTime={filterState.customEndTime}
       />
 
       {/* Main Content Area */}
@@ -143,8 +154,9 @@ export const App: React.FC = () => {
           filterState={filterState}
           onFilterChange={handleFilterUpdate}
           onResetFilters={handleResetFilters}
-          totalLoaded={events.length}
-          filteredCount={filteredEvents.length}
+          apiCount={events.length}
+          geoMatchCount={geoMatchedEvents.length}
+          displayedCount={filteredEvents.length}
           isLoading={isLoading}
         />
 
@@ -154,6 +166,7 @@ export const App: React.FC = () => {
           selectedEvent={selectedEvent}
           onSelectEvent={handleSelectEvent}
           isLoading={isLoading}
+          region={filterState.region}
         />
 
         {/* Analytics Section: Frequency Timeline & Magnitude Distribution */}

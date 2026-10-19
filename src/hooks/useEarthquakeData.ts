@@ -5,6 +5,7 @@ import type {
   DashboardFilterState,
 } from '../types/earthquake';
 import { fetchEarthquakesFromUsgs, calculateTimeWindow } from '../services/usgsApi';
+import { getRegionBoundingBox } from '../utils/geoBoundaries';
 
 export interface UseEarthquakeDataReturn {
   events: EarthquakeEvent[];
@@ -46,16 +47,23 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
       filterState.customEndTime
     );
 
+    const bbox = getRegionBoundingBox(filterState.region);
+
     return {
       format: 'geojson',
       starttime: timeWindow.starttime,
       endtime: timeWindow.endtime,
       minmagnitude: filterState.minMagnitude,
       maxmagnitude: filterState.maxMagnitude < 10 ? filterState.maxMagnitude : undefined,
+      minlatitude: bbox?.minlatitude,
+      maxlatitude: bbox?.maxlatitude,
+      minlongitude: bbox?.minlongitude,
+      maxlongitude: bbox?.maxlongitude,
       limit: filterState.limit,
       orderby: 'time',
     };
   }, [
+    filterState.region,
     filterState.timePreset,
     filterState.customStartTime,
     filterState.customEndTime,

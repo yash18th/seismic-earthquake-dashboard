@@ -173,7 +173,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({
             </div>
             <div className="space-y-1.5 text-xs pl-5.5">
               <div>
-                <span className="text-slate-400">Occurrence:</span>{' '}
+                <span className="text-slate-400">Origin Time (UTC):</span>{' '}
                 <strong className="font-mono text-slate-100">{formatUtcDateTime(event.time)}</strong>
               </div>
               <div className="text-[11px] text-slate-400">
@@ -220,8 +220,14 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs pl-5.5">
               <div>
-                <span className="text-slate-400">Status:</span>{' '}
-                <span className="font-semibold text-slate-200 capitalize">{event.status}</span>
+                <span className="text-slate-400">Quality Status:</span>{' '}
+                {event.status === 'reviewed' ? (
+                  <span className="font-semibold text-emerald-400">Reviewed by Seismologist</span>
+                ) : event.status === 'automatic' ? (
+                  <span className="font-semibold text-amber-400">Automatic Algorithm</span>
+                ) : (
+                  <span className="font-semibold text-slate-200 capitalize">{event.status}</span>
+                )}
               </div>
               <div>
                 <span className="text-slate-400">USGS Significance:</span>{' '}

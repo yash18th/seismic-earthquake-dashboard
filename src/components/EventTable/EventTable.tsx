@@ -253,9 +253,25 @@ export const EventTable: React.FC<EventTableProps> = ({
                             <AlertTriangle className="w-3 h-3" />
                           </span>
                         )}
-                        <span className="text-[10px] text-slate-400 capitalize">
-                          {event.status}
-                        </span>
+                        {event.status === 'reviewed' ? (
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-800/60 uppercase tracking-wider"
+                            title="Reviewed by human seismologist"
+                          >
+                            Reviewed
+                          </span>
+                        ) : event.status === 'automatic' ? (
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-800/60 uppercase tracking-wider"
+                            title="Automatic preliminary sensor solution"
+                          >
+                            Automatic
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 capitalize">
+                            {event.status}
+                          </span>
+                        )}
                       </div>
                     </td>
 

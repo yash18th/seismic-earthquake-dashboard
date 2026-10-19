@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
-import type { EarthquakeEvent } from '../../types/earthquake';
+import type { EarthquakeEvent, RegionPreset } from '../../types/earthquake';
 import { formatMagnitude, formatDepth, formatUtcDateTime, getMagnitudeColor } from '../../utils/formatters';
+import { getRegionViewport } from '../../utils/geoBoundaries';
 import { MapLegend } from './MapLegend';
-import { Globe, Maximize2, Layers, MapPin } from 'lucide-react';
+import { Globe, Maximize2, Layers, MapPin, AlertCircle } from 'lucide-react';
 
 interface EarthquakeMapProps {
   events: EarthquakeEvent[];
   selectedEvent: EarthquakeEvent | null;
   onSelectEvent: (event: EarthquakeEvent) => void;
   isLoading: boolean;
+  region: RegionPreset;
 }
 
 export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
@@ -17,6 +19,7 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   selectedEvent,
   onSelectEvent,
   isLoading,
+  region,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -199,10 +202,31 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
     }
   }, [selectedEvent]);
 
+  // Shift map view when region selector or events change
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const vp = getRegionViewport(region);
+
+    const validCoords = events
+      .filter((e) => e.coordinates !== null)
+      .map((e) => [e.coordinates!.latitude, e.coordinates!.longitude] as [number, number]);
+
+    if (validCoords.length > 0 && region !== 'global') {
+      const bounds = L.latLngBounds(validCoords);
+      if (bounds.isValid()) {
+        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, animate: true });
+        return;
+      }
+    }
+
+    mapInstanceRef.current.flyTo(vp.center, vp.zoom, { duration: 1.0 });
+  }, [region, events]);
+
   const handleResetView = useCallback(() => {
     if (!mapInstanceRef.current) return;
-    mapInstanceRef.current.setView([20, 0], 2);
-  }, []);
+    const vp = getRegionViewport(region);
+    mapInstanceRef.current.flyTo(vp.center, vp.zoom, { duration: 0.8 });
+  }, [region]);
 
   const handleFitBounds = useCallback(() => {
     if (!mapInstanceRef.current || events.length === 0) return;
@@ -218,6 +242,7 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   }, [events]);
 
   const missingCoordsCount = events.filter((e) => e.coordinates === null).length;
+  const plottedCount = events.filter((e) => e.coordinates !== null).length;
 
   return (
     <section aria-label="Interactive Global Seismic Map" className="relative rounded-xl overflow-hidden border border-slate-800 bg-[#080d1a] shadow-lg flex flex-col h-[520px]">
@@ -225,9 +250,9 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
       <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2">
         <div className="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-200 flex items-center gap-2 shadow-lg">
           <Globe className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-semibold">Geospatial Distribution</span>
+          <span className="font-semibold capitalize">{region} Seismic Map</span>
           <span className="text-[11px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono">
-            {events.filter((e) => e.coordinates !== null).length} plotted
+            {plottedCount} plotted
           </span>
         </div>
 
@@ -235,6 +260,13 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
           <div className="bg-amber-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-amber-800/80 text-[11px] text-amber-300 flex items-center gap-1.5 shadow-lg">
             <MapPin className="w-3 h-3 text-amber-400" />
             <span>{missingCoordsCount} unplottable (missing coordinates)</span>
+          </div>
+        )}
+
+        {plottedCount === 0 && (
+          <div className="bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-800 text-[11px] text-slate-400 flex items-center gap-1.5 shadow-lg">
+            <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
+            <span>No recorded events in {region} for current filters</span>
           </div>
         )}
       </div>

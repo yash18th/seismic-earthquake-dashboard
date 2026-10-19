@@ -8,7 +8,7 @@
 ---
 
 ## 1. Project Overview & Objective
-The objective was to engineer an interactive, production-grade seismic intelligence dashboard powered entirely by real-time telemetry from the official USGS Earthquake Hazards API. This application eliminates mock, fabricated, or static data in favor of an end-to-end data pipeline that executes live FDSN HTTP queries, validates and normalizes GeoJSON payloads, visualizes geospatial coordinates on a dark-themed world map with magnitude-proportional circle markers, presents statistical aggregations, and provides filterable event tables with synchronized side-panel inspection.
+SEISMIC is an interactive, production-grade seismic intelligence dashboard powered entirely by real-time recorded telemetry from the official USGS Earthquake Hazards FDSN Web Service. This application monitors recorded seismic history; it does not predict future earthquakes. It strictly eliminates mock or fabricated records in favor of a real-data architecture with verified geographic boundary filtering, interactive Leaflet mapping, statistical aggregations, parametric controls, and event-detail inspection.
 
 ---
 
@@ -32,7 +32,7 @@ filter and search controls, and a concise one-page verification report.
 ```
 USGS FDSN Event Web Service (https://earthquake.usgs.gov/fdsnws/event/1/query)
                            │
-                           ▼ (format=geojson, starttime, endtime, minmag, limit, orderby)
+                           ▼ (format=geojson, starttime, endtime, minmag, bbox, limit, orderby)
               [src/services/usgsApi.ts]
       ┌────────────────────┴────────────────────┐
       │ AbortController & Query Validation     │
@@ -44,8 +44,17 @@ USGS FDSN Event Web Service (https://earthquake.usgs.gov/fdsnws/event/1/query)
           [src/hooks/useEarthquakeData.ts]
       ┌────────────────────┴────────────────────┐
       │ Reactive State, 60s Polling, Aborts    │
+      │ Bounding Box Candidate Reduction        │
       │ Retains Stale Valid Data on Failure    │
-      │ Zero Fake / Mock Fallback Injection     │
+      └────────────────────┬────────────────────┘
+                           │
+                           ▼
+          [src/utils/geoBoundaries.ts]
+      ┌────────────────────┴────────────────────┐
+      │ Ray-Casting Point-in-Polygon Tests     │
+      │ India Multi-Polygon (Mainland + Islands)│
+      │ Asia Continental Polygon Boundary       │
+      │ Rejects Mid-Indian Ridge from India     │
       └────────────────────┬────────────────────┘
                            │
          ┌─────────────────┼─────────────────┐
@@ -59,78 +68,73 @@ USGS FDSN Event Web Service (https://earthquake.usgs.gov/fdsnws/event/1/query)
                            ▼
          [EventTable.tsx] ◄──► [EventDetailPanel.tsx]
       Paginated & Sorted      Synchronized Telemetry Drawer
+      Reviewed vs Automatic   Origin Time UTC & Coordinates
 ```
 
-1. **API Service (`src/services/usgsApi.ts`):** Uses native `URLSearchParams` for safe query construction and `AbortController` to abort in-flight requests when filters change. Normalizes `[lon, lat, depth]` coordinates, preserving authentic negative depths (volcanic/summit epicenters).
-2. **State Management (`src/hooks/useEarthquakeData.ts`):** Centralizes query execution, auto-polling (60s timer), manual refresh, and stale data retention upon network failure without fabricated fallbacks.
-3. **Statistical Engine (`src/utils/calculations.ts`):** Computes total counts, peak magnitude, mean magnitude, and significant events using an explicit operational threshold ($M \ge 4.5$). Missing/invalid values are excluded and displayed as `N/A`. Derived from the active filtered view to ensure 100% KPI/Map/Table synchrony.
-4. **Interactive UI (`src/components/`):** Leaflet world map with circle markers scaled by magnitude, Recharts frequency timeline and magnitude distribution histogram (supporting dynamic sub-2.5 microseism bins), sorted/paginated event table, and synchronized event details drawer.
+---
+
+## 4. Geographic Filtering: How India Differs from Asia
+
+Text search alone (e.g. searching `"india"`) introduces false positives such as **"Mid-Indian Ridge"** or **"Western Indian-Antarctic Ridge"**—oceanic spreading ridges located in the southern Indian Ocean ($-10^\circ\text{ S}$ to $-45^\circ\text{ S}$) thousands of kilometers outside Indian sovereignty.
+
+SEISMIC resolves this with a two-tier geographic engine:
+
+1. **Server-Side Bounding Box Optimization:**
+   - **India:** `minlatitude=6.0&maxlatitude=37.5&minlongitude=68.0&maxlongitude=97.5`
+   - **Asia:** `minlatitude=-12.0&maxlatitude=82.0&minlongitude=25.0&maxlongitude=180.0`
+   - **Global:** Unrestricted coordinates.
+2. **Ray-Casting Point-in-Polygon Verification (`src/utils/geoBoundaries.ts`):**
+   - **India Boundary:** Verified geodetic multi-polygon covering mainland India (Kashmir/Ladakh to Kanyakumari, Gujarat to Arunachal Pradesh) plus island territories (Andaman & Nicobar Islands, Lakshadweep). Correctly rejects Mid-Indian Ridge and adjacent nations (Pakistan, Nepal, Tibet, Myanmar, Sri Lanka).
+   - **Asia Boundary:** Encompasses East Asia, South Asia, Southeast Asia, Central Asia, and West Asia / Middle East. Excludes Europe west of the Urals, Africa, Oceania, and southern oceanic ridges.
+3. **Distinct Three-Tier Results Accounting:**
+   - **API Returned Count:** Total features fetched from the USGS query.
+   - **Region Matches:** Events geometrically verified inside the polygon boundary.
+   - **Displayed Count:** Events matching active search and magnitude limits.
 
 ---
 
-## 4. Official USGS API Endpoint & Active Parameters
+## 5. Official USGS API Endpoint & Active Verification
 
-| Parameter | Configuration / Default | Function |
-| :--- | :--- | :--- |
-| **Base Endpoint** | `https://earthquake.usgs.gov/fdsnws/event/1/query` | Official USGS FDSN Web Service (No API Key Required) |
-| `format` | `geojson` | Standardized RFC 7946 GeoJSON `FeatureCollection` |
-| `starttime` | ISO 8601 (e.g. `2026-10-18T14:14:55.252Z`) | Dynamic start of query window (1h, 24h, 7d, 30d, or custom) |
-| `endtime` | ISO 8601 (e.g. `2026-10-19T14:14:55.252Z`) | Dynamic end of query window (Fresh UTC timestamp) |
-| `minmagnitude` | Configurable (Default: `2.5`) | Filters low-energy background microseisms |
-| `limit` | `500` (Bounded 100–500) | Ensures responsive rendering and rapid map plotting |
-| `orderby` | `time` | Returns chronologically newest records first |
+Live verification was executed directly against the USGS FDSN Web Service using the dashboard's default 24-hour query parameters:
 
----
-
-## 5. Verification Method: UI vs. Raw USGS API Comparison
-
-Live verification was executed directly against the USGS FDSN Web Service using the application's default 24-hour query parameters (`minmagnitude=2.5&limit=500&orderby=time`):
-
-| Property | Raw USGS API Response (Live Stream) | SEISMIC Application Output | Verification Status |
+| Property | Raw USGS API Payload | SEISMIC Application Output | Verification Status |
 | :--- | :--- | :--- | :--- |
-| **Active Query URL** | `https://earthquake.usgs.gov/fdsnws/event/1/query?...` | Matches URLSearchParams generated by service | **Verified Match** |
-| **Total Features Returned**| `47` events in 24h window | `47` records in view | **Verified Match** |
-| **Valid Coordinates** | `47 / 47` ($100\%$) | `47` circle markers plotted on Leaflet map | **Verified Match (0 excluded)** |
-| **Valid Magnitudes** | `47 / 47` ($100\%$, range $2.5 - 6.0$) | `47 / 47` displayed in badges & histogram | **Verified Match** |
-| **Event 1 ID** | `us6000u3ch` | `us6000u3ch` | **Verified Match** |
-| **Event 1 Place** | `56 km N of Ruteng, Indonesia` | `56 km N of Ruteng, Indonesia` | **Verified Match** |
-| **Event 1 Mag** | `4.8 mb` | `M 4.8 (mb)` | **Verified Match** |
-| **Event 1 Coords** | `[120.378, -8.1042, 10.0]` | `8.1042° S, 120.3780° E` (Depth: `10.0 km`) | **Verified Match** |
-| **Event 1 Time** | `1792411561884` (`2026-10-19T12:06:01.884Z`) | `Oct 19, 2026, 12:06:01 UTC` | **Verified Match** |
-| **Event 2 ID** | `us6000u3ce` | `us6000u3ce` | **Verified Match** |
-| **Event 2 Place** | `212 km WNW of Port-Olry, Vanuatu` | `212 km WNW of Port-Olry, Vanuatu` | **Verified Match** |
-| **Dataset Peak Mag** | `6.0` (`us6000u3bc`, Port-Olry, Vanuatu) | `M 6.0` (Peak Magnitude KPI Card) | **Verified Match** |
-| **Dataset Mean Mag**| $\frac{\sum M}{47} = 4.12$ | `M 4.12` (Average Magnitude KPI Card) | **Verified Match** |
-| **Significant Count** | `25` events with $M \ge 4.5$ | `25` events (Significant Events KPI Card) | **Verified Match** |
-| **Shallow Events** | `36` events with depth $< 70\text{ km}$ | `36` events (Shallow Focus Sub-counter) | **Verified Match** |
-| **Empty Results Handling**| `{"features": []}` (`minmagnitude=9.8`) | Handled cleanly; 0 count, `N/A` peak/avg | **Verified Match** |
+| **API Endpoint** | `https://earthquake.usgs.gov/fdsnws/event/1/query` | Native URLSearchParams query | **Verified Exact** |
+| **Active 24h Features**| `47` events returned | `47` records loaded | **Verified Exact** |
+| **Valid Coordinates** | `47 / 47` ($100\%$) | `47` plotted on Leaflet map | **Verified Exact (0 excluded)** |
+| **Valid Magnitudes** | `47 / 47` ($100\%$, range $2.5 - 6.0$) | `47 / 47` displayed in catalog | **Verified Exact** |
+| **Event #1 ID & Place**| `us6000u3ch` (56 km N of Ruteng, Indonesia) | `us6000u3ch` (Ruteng, Indonesia) | **Verified Exact** |
+| **Event #1 Origin Time**| `1792411561884` (`2026-10-19T12:06:01.884Z`) | `Oct 19, 2026, 12:06:01 UTC` | **Verified Exact** |
+| **Dataset Peak Mag** | `6.0` (`us6000u3bc`, Port-Olry, Vanuatu) | `M 6.0` (Peak Magnitude Card) | **Verified Exact** |
+| **Dataset Mean Mag** | $\frac{\sum M}{47} = 4.12$ | `M 4.12` (Average Magnitude Card) | **Verified Exact** |
+| **Significant Threshold**| `25` events with $M \ge 4.5$ | `25` events (Significant Events Card) | **Verified Exact** |
+| **Status Distinction** | USGS `status: 'reviewed'` vs `'automatic'` | Visual badges distinguishing both | **Verified Exact** |
 
 ---
 
-## 6. Actual Tests Performed & Production Build
+## 6. Automated Tests & Production Build
 
-Automated tests were written using **Vitest** and **React Testing Library** with a 100% test pass rate across 56 test cases in 5 test suites:
+Automated tests were written using **Vitest** and **React Testing Library** with a 100% test pass rate across **71 test cases in 6 test suites**:
 
 ```text
  ✓ src/test/calculations.test.ts (9 tests)
- ✓ src/test/usgsApi.test.ts (18 tests)
+ ✓ src/test/usgsApi.test.ts (19 tests)
+ ✓ src/test/geoBoundaries.test.ts (13 tests)
  ✓ src/test/aggregation.test.ts (7 tests)
  ✓ src/test/formatters.test.ts (16 tests)
- ✓ src/test/components.test.tsx (6 tests)
+ ✓ src/test/components.test.tsx (7 tests)
 
- Test Files: 5 passed (5)
-      Tests: 56 passed (56)
-   Duration: 759ms
+ Test Files: 6 passed (6) | Tests: 71 passed (71) | Duration: 873ms
+ Linter: oxlint -> 0 warnings, 0 errors (28 files)
+ Build:  tsc -b && vite build -> SUCCESS (0 errors, 159ms)
 ```
 
-### Verified Scope:
-1. **API URL Construction:** Parameter serialization (`starttime`, `endtime`, `minmagnitude`, `maxmagnitude`, `limit`, `orderby`).
-2. **GeoJSON Normalization:** Conversion of `[longitude, latitude, depth]` array to typed coordinate objects; authentic negative depth preservation.
-3. **Statistical Integrity:** Math for total, peak, mean, and count of $M \ge 4.5$ events; null/NaN exclusion to prevent zero-skewed averages.
-4. **Time & Energy Aggregations:** UTC hourly bucketing with empty-bucket zero filling; dynamic `< M 2.5` microseism binning.
-5. **Cross-Component Synchronization:** Map marker clicks, table row selection, and event details drawer all reference identical USGS event IDs.
-6. **Network Failure & Anti-Fabrication:** HTTP 503 error handling; retention of existing valid data marked as `isStale: true` without injecting synthetic data.
-7. **Production Build & Linting:** `oxlint` found 0 warnings/errors across 26 files; `tsc -b && vite build` bundled cleanly in 177ms.
+### Verified Test Scope:
+1. **India Polygon Accuracy:** Tested inclusion of Delhi, Mumbai, Kutch, Assam, Andaman & Nicobar, Lakshadweep; verified exclusion of Mid-Indian Ridge, Pakistan, Nepal, Tibet, and Sri Lanka.
+2. **Asia Polygon Accuracy:** Tested inclusion of Tokyo, Jakarta, Tehran, Ankara, Tashkent, Delhi, Manila; verified exclusion of California, Iceland, Chile, Australia, and UK.
+3. **API Serialization:** Verified starttime, endtime, min/max magnitude, limit, orderby, and bounding box parameters (`minlatitude`, `maxlatitude`, `minlongitude`, `maxlongitude`).
+4. **Resilience:** Verified graceful handling of missing/NaN coordinates, null magnitudes, HTTP 503 errors, and retention of stale cache.
+5. **UI & KPI Consistency:** Verified that FilterBar, Map viewport, Table, and KPIs update in unison upon region switching.
 
 ---
 
@@ -138,18 +142,17 @@ Automated tests were written using **Vitest** and **React Testing Library** with
 
 | Domain | Status | Evidence / Notes |
 | :--- | :--- | :--- |
-| **USGS API Integration** | **Verified** | Live HTTP 200 queries validated against official USGS FDSN Web Service. |
-| **Coordinate & Marker Accuracy**| **Verified** | 47/47 valid coordinates plotted; zero coordinates excluded. |
+| **USGS API Integration** | **Verified** | Live HTTP queries validated against official USGS FDSN Web Service. |
+| **Geographic Polygon Engine** | **Verified** | 13/13 dedicated boundary tests passing; Mid-Indian Ridge rejected. |
 | **Statistical Calculations** | **Verified** | Verified against manual mathematical calculations and automated tests. |
-| **Component Synchronization** | **Verified** | Selection ID bound identically across Map, Table, and Details Drawer. |
-| **Automated Test Suite** | **Verified** | 56/56 passing tests across 5 test suites with jsdom environment. |
-| **Static Analysis & Build** | **Verified** | 0 lint errors (`oxlint`), 0 TypeScript errors (`tsc -b`), successful Vite bundle. |
-| **Continuous Remote CI/CD** | **Pending** | Remote deployment pipeline dependent on candidate repository hosting (e.g. GitHub Actions / Vercel). |
-| **Real-World Telemetry Shift** | **Operational** | Continuous real-time data automatically updates via 60-second polling or manual refresh. |
+| **Non-Predictive Scientific Clarity**| **Verified** | Prominently stated across Header, FilterBar, and KPI cards. |
+| **Automated Test Suite** | **Verified** | 71/71 passing tests across 6 test suites with jsdom environment. |
+| **Static Analysis & Build** | **Verified** | 0 lint errors (`oxlint`), 0 TypeScript errors (`tsc -b`), clean Vite bundle. |
+| **Remote Host CI/CD** | **Pending** | Dependent on candidate remote git repository setup. |
 
 ---
 
-## 8. Known Limitations & Potential Improvements
-- **Tectonic Plate Boundaries:** Adding an optional GeoJSON overlay of global tectonic fault lines would enhance contextual analysis of subduction zones.
-- **WebSocket Streaming:** USGS does not offer a native WebSocket endpoint; the dashboard utilizes a 60-second polling mechanism to deliver fresh events.
-- **Audible Emergency Pagers:** Audible alert tones for high-magnitude events ($M \ge 7.0$) could be added for emergency operations centers.
+## 8. Known Limitations
+- **Tectonic Boundary Overlay:** Visualizing fault lines as an optional GeoJSON overlay would further aid plate tectonics analysis.
+- **WebSocket Streaming:** USGS does not natively provide a public WebSocket, so 60-second polling is used for automated updates.
+- **Audible Emergency Pagers:** An audio alarm could be added for emergency operations centers during $M \ge 7.0$ occurrences.

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Activity, RefreshCw, Wifi, AlertTriangle, Clock, ShieldCheck, FileText } from 'lucide-react';
+import { Activity, RefreshCw, Wifi, AlertTriangle, Clock, ShieldCheck, FileText, Calendar } from 'lucide-react';
 import { formatUtcDateTime, formatRelativeTime } from '../utils/formatters';
+import type { TimeRangePreset } from '../types/earthquake';
 
 interface HeaderProps {
   lastUpdated: Date | null;
@@ -13,6 +14,9 @@ interface HeaderProps {
   onRefresh: () => void;
   onOpenReport: () => void;
   totalLoaded: number;
+  timePreset: TimeRangePreset;
+  customStartTime?: string;
+  customEndTime?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +30,9 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onOpenReport,
   totalLoaded,
+  timePreset,
+  customStartTime,
+  customEndTime,
 }) => {
   // Connection status distinction:
   // - "Connected" (API is reachable and data is fresh)
@@ -33,6 +40,19 @@ export const Header: React.FC<HeaderProps> = ({
   // - "Offline / Error" (network or USGS API failure)
   // - "Syncing..." (active request in flight)
   const isSyncing = isLoading || isRefreshing;
+
+  const timeRangeLabel =
+    timePreset === '1h'
+      ? 'Past 1 Hour'
+      : timePreset === '24h'
+      ? 'Past 24 Hours'
+      : timePreset === '7d'
+      ? 'Past 7 Days'
+      : timePreset === '30d'
+      ? 'Past 30 Days'
+      : customStartTime && customEndTime
+      ? `${customStartTime.substring(0, 10)} to ${customEndTime.substring(0, 10)} UTC`
+      : 'Custom UTC Range';
 
   return (
     <header className="border-b border-slate-800/80 bg-[#090e1a]/90 backdrop-blur-md sticky top-0 z-30 transition-all">
@@ -54,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Global Earthquake Intelligence & Seismic Telemetry
+              Recorded Earthquake Monitoring &amp; Telemetry (Non-Predictive Scientific Catalog)
             </p>
           </div>
         </div>
@@ -95,6 +115,15 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>USGS FDSN Online ({totalLoaded} loaded)</span>
               </>
             )}
+          </div>
+
+          {/* Selected Date Range Indicator */}
+          <div className="flex items-center gap-1.5 text-slate-300 bg-slate-900/80 px-2.5 py-1.5 rounded-md border border-slate-800">
+            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="flex items-center gap-1 text-[11px]">
+              <span className="text-slate-400">Query Window:</span>
+              <span className="font-mono font-medium text-cyan-300">{timeRangeLabel}</span>
+            </div>
           </div>
 
           {/* Last Successful Refresh Indicator */}

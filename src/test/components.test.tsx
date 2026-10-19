@@ -85,6 +85,7 @@ describe('Dashboard Component Unit Tests', () => {
           onRefresh={handleRefresh}
           onOpenReport={handleOpenReport}
           totalLoaded={50}
+          timePreset="24h"
         />
       );
 
@@ -98,6 +99,54 @@ describe('Dashboard Component Unit Tests', () => {
       const reportBtn = screen.getByTitle(/Open 1-Page Assignment/i);
       fireEvent.click(reportBtn);
       expect(handleOpenReport).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('FilterBar', () => {
+    it('renders region selector and handles region, search, and reset changes', async () => {
+      const { FilterBar } = await import('../components/FilterBar');
+      const handleFilterChange = vi.fn();
+      const handleReset = vi.fn();
+
+      render(
+        <FilterBar
+          filterState={{
+            region: 'global',
+            timePreset: '24h',
+            customStartTime: '',
+            customEndTime: '',
+            minMagnitude: 2.5,
+            maxMagnitude: 10,
+            searchQuery: '',
+            sortBy: 'newest',
+            limit: 500,
+            significantOnly: false,
+          }}
+          onFilterChange={handleFilterChange}
+          onResetFilters={handleReset}
+          apiCount={100}
+          geoMatchCount={35}
+          displayedCount={20}
+          isLoading={false}
+        />
+      );
+
+      expect(screen.getByText('Global')).toBeInTheDocument();
+      expect(screen.getByText('Asia')).toBeInTheDocument();
+      expect(screen.getByText('India')).toBeInTheDocument();
+      expect(screen.getByText('100')).toBeInTheDocument();
+      expect(screen.getByText('35')).toBeInTheDocument();
+      expect(screen.getByText('20')).toBeInTheDocument();
+
+      // Click India region button
+      const indiaBtn = screen.getByRole('button', { name: 'India' });
+      fireEvent.click(indiaBtn);
+      expect(handleFilterChange).toHaveBeenCalledWith({ region: 'india' });
+
+      // Click Reset Filters button
+      const resetBtn = screen.getByRole('button', { name: /Reset Filters/i });
+      fireEvent.click(resetBtn);
+      expect(handleReset).toHaveBeenCalledTimes(1);
     });
   });
 

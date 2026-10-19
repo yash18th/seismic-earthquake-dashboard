@@ -99,8 +99,8 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ kpis, isLoading }) => {
             </span>
             <div className="group relative cursor-pointer" tabIndex={0} aria-label="Threshold info">
               <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-200" />
-              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block group-focus:block w-56 p-2 bg-slate-950 border border-slate-700 rounded-md shadow-xl text-[11px] text-slate-300 z-50">
-                <span className="font-semibold text-amber-400">Dashboard Threshold:</span> Defined as events with Magnitude ≥ {SIGNIFICANT_MAGNITUDE_THRESHOLD}. Note: This is an application-defined operational threshold, distinct from the USGS composite 'sig' calculation formula.
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block group-focus:block w-64 p-2.5 bg-slate-950 border border-slate-700 rounded-md shadow-xl text-[11px] text-slate-300 z-50">
+                <span className="font-semibold text-amber-400">Dashboard Threshold:</span> Defined as events with Magnitude ≥ {SIGNIFICANT_MAGNITUDE_THRESHOLD}. Note: This is an application-defined operational threshold, distinct from the USGS composite 'sig' formula. This descriptive statistic monitors past recorded earthquakes and does not predict future seismic activity.
               </div>
             </div>
           </div>
@@ -117,7 +117,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ kpis, isLoading }) => {
           </span>
         </div>
         <p className="mt-1 text-[11px] text-slate-400">
-          Events with heightened impact potential
+          Historical recorded events (non-predictive)
         </p>
       </div>
 

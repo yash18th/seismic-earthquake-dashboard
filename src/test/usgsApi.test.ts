@@ -49,6 +49,22 @@ describe('USGS API Service & Normalization', () => {
       const url = new URL(urlString);
       expect(url.searchParams.has('maxmagnitude')).toBe(false);
     });
+
+    it('serializes geographic bounding box parameters (minlatitude, maxlatitude, minlongitude, maxlongitude)', () => {
+      const urlString = buildUsgsApiUrl({
+        format: 'geojson',
+        minlatitude: 6.0,
+        maxlatitude: 37.5,
+        minlongitude: 68.0,
+        maxlongitude: 97.5,
+      });
+
+      const url = new URL(urlString);
+      expect(url.searchParams.get('minlatitude')).toBe('6');
+      expect(url.searchParams.get('maxlatitude')).toBe('37.5');
+      expect(url.searchParams.get('minlongitude')).toBe('68');
+      expect(url.searchParams.get('maxlongitude')).toBe('97.5');
+    });
   });
 
   describe('calculateTimeWindow', () => {
