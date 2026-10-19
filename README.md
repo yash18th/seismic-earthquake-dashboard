@@ -72,7 +72,7 @@ npm run dev
 Open your browser at [http://127.0.0.1:5173](http://127.0.0.1:5173).
 
 ### 3. Running Automated Tests
-Execute the 45-test suite covering API construction, GeoJSON normalization, KPI math, and UI components:
+Execute the 56-test suite covering API construction, GeoJSON normalization, authentic negative depth preservation, timeline & magnitude aggregations, KPI math, and UI components:
 ```bash
 npm run test
 ```
@@ -82,7 +82,7 @@ npm run test:watch
 ```
 
 ### 4. Production Build & Preview
-Compile the optimized production bundle:
+Compile the optimized production bundle and preview it locally:
 ```bash
 npm run build
 npm run preview
@@ -131,6 +131,7 @@ seismic-earthquake-dashboard/
         ├── setup.ts            # Test setup with @testing-library/jest-dom
         ├── usgsApi.test.ts     # API service, URL params, and GeoJSON tests
         ├── calculations.test.ts# KPI calculations, null handling, filter tests
+        ├── aggregation.test.ts # Timeline hourly bucketing & histogram tests
         ├── formatters.test.ts  # String, depth, coordinate, and color tests
         └── components.test.tsx # Unit tests for Header, KPIs, Table, and Drawer
 ```

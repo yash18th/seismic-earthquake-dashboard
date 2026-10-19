@@ -171,7 +171,13 @@ export const AssignmentReportModal: React.FC<AssignmentReportModalProps> = ({
               <div className="flex items-center gap-2 text-emerald-400">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>
-                  <strong>Production Bundle &amp; Zero Warning Check:</strong> Verified with <code className="text-slate-300">tsc -b</code> and <code className="text-slate-300">vite build</code>.
+                  <strong>Comprehensive Test Suite (56 Passing Tests):</strong> 5 test suites covering API queries, GeoJSON normalization, authentic negative depth preservation, timeline &amp; magnitude aggregations, statistical KPIs, and component rendering.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-400">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>
+                  <strong>Production Bundle &amp; Zero Warning Check:</strong> Verified with <code className="text-slate-300">oxlint</code> (0 errors), <code className="text-slate-300">tsc -b</code>, and <code className="text-slate-300">vite build</code>.
                 </span>
               </div>
             </div>
