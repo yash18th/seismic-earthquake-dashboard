@@ -94,6 +94,23 @@ export type TimeRangePreset = '1h' | '24h' | '7d' | '30d' | 'custom';
 
 export type RegionPreset = 'global' | 'asia' | 'india';
 
+export interface ResolvedLocation {
+  id: string;
+  name: string;
+  displayName: string;
+  type: 'country' | 'region' | 'city';
+  center: [number, number]; // [latitude, longitude]
+  bounds: {
+    minlatitude: number;
+    maxlatitude: number;
+    minlongitude: number;
+    maxlongitude: number;
+  };
+  zoom: number;
+  polygon?: [number, number][]; // optional polygon for point-in-polygon verification
+  aliases?: string[];
+}
+
 export type SortOption = 'newest' | 'oldest' | 'strongest' | 'weakest';
 
 export interface UsgsQueryParams {
@@ -112,6 +129,7 @@ export interface UsgsQueryParams {
 
 export interface DashboardFilterState {
   region: RegionPreset;
+  selectedLocation: ResolvedLocation | null;
   timePreset: TimeRangePreset;
   customStartTime: string;
   customEndTime: string;

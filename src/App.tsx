@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import type { DashboardFilterState, EarthquakeEvent } from './types/earthquake';
+import type { DashboardFilterState, EarthquakeEvent, ResolvedLocation } from './types/earthquake';
 import { useEarthquakeData } from './hooks/useEarthquakeData';
-import { calculateKpis, filterAndSortEvents, filterEventsByRegion } from './utils/calculations';
+import { calculateKpis, filterAndSortEvents, filterEventsByLocationOrRegion } from './utils/calculations';
 import { Header } from './components/Header';
 import { KpiCards } from './components/KpiCards';
 import { FilterBar } from './components/FilterBar';
+import { LocationDetailPanel } from './components/Location/LocationDetailPanel';
 import { EarthquakeMap } from './components/Map/EarthquakeMap';
 import { ChartsSection } from './components/Analytics/ChartsSection';
 import { EventTable } from './components/EventTable/EventTable';
@@ -15,6 +16,7 @@ import { ShieldCheck, Database } from 'lucide-react';
 
 const INITIAL_FILTER_STATE: DashboardFilterState = {
   region: 'global',
+  selectedLocation: null,
   timePreset: '24h',
   customStartTime: '',
   customEndTime: '',
@@ -45,10 +47,10 @@ export const App: React.FC = () => {
     refresh,
   } = useEarthquakeData(filterState);
 
-  // Geographic boundary pre-matched events within selected region
+  // Geographic boundary pre-matched events within selected location or region
   const geoMatchedEvents = useMemo(() => {
-    return filterEventsByRegion(events, filterState.region);
-  }, [events, filterState.region]);
+    return filterEventsByLocationOrRegion(events, filterState.region, filterState.selectedLocation);
+  }, [events, filterState.region, filterState.selectedLocation]);
 
   // Apply client-side filters (geographic boundary, text search, magnitude bounds, sorting, significant toggle)
   const filteredEvents = useMemo(() => {
@@ -59,7 +61,8 @@ export const App: React.FC = () => {
       filterState.maxMagnitude,
       filterState.sortBy,
       filterState.significantOnly,
-      filterState.region
+      filterState.region,
+      filterState.selectedLocation
     );
   }, [
     events,
@@ -69,7 +72,13 @@ export const App: React.FC = () => {
     filterState.sortBy,
     filterState.significantOnly,
     filterState.region,
+    filterState.selectedLocation,
   ]);
+
+  // Number of valid-coordinate events plotted on the map
+  const plottedCount = useMemo(() => {
+    return filteredEvents.filter((e) => e.coordinates !== null).length;
+  }, [filteredEvents]);
 
   // Compute dataset KPIs from currently filtered view for strict consistency across components
   const kpis = useMemo(() => calculateKpis(filteredEvents), [filteredEvents]);
@@ -109,6 +118,15 @@ export const App: React.FC = () => {
 
   const handleFilterUpdate = useCallback((updates: Partial<DashboardFilterState>) => {
     setFilterState((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleSelectLocation = useCallback((loc: ResolvedLocation | null) => {
+    setFilterState((prev) => ({
+      ...prev,
+      selectedLocation: loc,
+      region: loc?.id === 'IN' ? 'india' : loc ? 'global' : prev.region,
+      searchQuery: loc ? loc.name : '',
+    }));
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -154,11 +172,28 @@ export const App: React.FC = () => {
           filterState={filterState}
           onFilterChange={handleFilterUpdate}
           onResetFilters={handleResetFilters}
+          onSelectLocation={handleSelectLocation}
           apiCount={events.length}
           geoMatchCount={geoMatchedEvents.length}
           displayedCount={filteredEvents.length}
+          plottedCount={plottedCount}
           isLoading={isLoading}
         />
+
+        {/* Location Detail Panel (Displayed when a country/region/city is selected) */}
+        {filterState.selectedLocation && (
+          <LocationDetailPanel
+            location={filterState.selectedLocation}
+            events={filteredEvents}
+            timePreset={filterState.timePreset}
+            minMagnitude={filterState.minMagnitude}
+            maxMagnitude={filterState.maxMagnitude}
+            onClearLocation={() => handleSelectLocation(null)}
+            onSelectEvent={handleSelectEvent}
+            onExpandDateRange={() => handleFilterUpdate({ timePreset: '30d' })}
+            onLowerMinMagnitude={() => handleFilterUpdate({ minMagnitude: 1.0 })}
+          />
+        )}
 
         {/* Primary Interactive Map */}
         <EarthquakeMap
@@ -167,6 +202,7 @@ export const App: React.FC = () => {
           onSelectEvent={handleSelectEvent}
           isLoading={isLoading}
           region={filterState.region}
+          selectedLocation={filterState.selectedLocation}
         />
 
         {/* Analytics Section: Frequency Timeline & Magnitude Distribution */}

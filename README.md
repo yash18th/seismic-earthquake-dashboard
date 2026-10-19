@@ -77,7 +77,7 @@ npm run dev
 Open your browser at [http://127.0.0.1:5173](http://127.0.0.1:5173).
 
 ### 3. Running Automated Tests
-Execute the 71-test suite covering geographic boundaries, API query construction, GeoJSON normalization, authentic negative depth preservation, timeline & magnitude aggregations, KPI math, and UI components:
+Execute the 89-test suite covering country/region resolution, geographic boundaries, zero-results workflows, API query construction, GeoJSON normalization, authentic negative depth preservation, timeline & magnitude aggregations, KPI math, and UI components:
 ```bash
 npm run test
 ```
@@ -109,7 +109,8 @@ seismic-earthquake-dashboard/
     ├── types/
     │   └── earthquake.ts       # USGS GeoJSON schema & normalized TypeScript models
     ├── services/
-    │   └── usgsApi.ts          # URL builder, fetch, AbortController, validation
+    │   ├── usgsApi.ts          # URL builder, fetch, AbortController, validation
+    │   └── locationService.ts  # 50+ country/region registry, aliases, autocomplete
     ├── hooks/
     │   └── useEarthquakeData.ts# Reactive data hook, polling, stale state retention
     ├── utils/
@@ -120,10 +121,12 @@ seismic-earthquake-dashboard/
     ├── components/
     │   ├── Header.tsx          # Branding, query window badge, connection, refresh
     │   ├── KpiCards.tsx        # 4 KPI cards & telemetry sub-counters
-    │   ├── FilterBar.tsx       # 4-row layout: region, search, sort, presets, magnitude
+    │   ├── FilterBar.tsx       # 4-row layout: region, location search, sort, presets
     │   ├── AssignmentReportModal.tsx # In-app report viewer modal
+    │   ├── Location/
+    │   │   └── LocationDetailPanel.tsx # Focused location KPIs, event list, & zero-results
     │   ├── Map/
-    │   │   ├── EarthquakeMap.tsx # Leaflet world map with circle markers & region viewports
+    │   │   ├── EarthquakeMap.tsx # Leaflet world map with circle markers & location viewports
     │   │   └── MapLegend.tsx   # Magnitude and depth color legend
     │   ├── Analytics/
     │   │   └── ChartsSection.tsx # Frequency timeline & magnitude distribution
@@ -138,6 +141,8 @@ seismic-earthquake-dashboard/
         ├── setup.ts            # Test setup with @testing-library/jest-dom
         ├── usgsApi.test.ts     # API service, URL params, and GeoJSON tests
         ├── geoBoundaries.test.ts # India/Asia polygon, Mid-Indian Ridge exclusion tests
+        ├── locationService.test.ts # Country alias resolution & autocomplete suggestions
+        ├── locationWorkflow.test.tsx # Zero-result state, map navigation, and stats tests
         ├── calculations.test.ts# KPI calculations, null handling, filter tests
         ├── aggregation.test.ts # Timeline hourly bucketing & histogram tests
         ├── formatters.test.ts  # String, depth, coordinate, and color tests

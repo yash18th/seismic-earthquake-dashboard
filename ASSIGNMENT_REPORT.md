@@ -114,7 +114,7 @@ Live verification was executed directly against the USGS FDSN Web Service using 
 
 ## 6. Automated Tests & Production Build
 
-Automated tests were written using **Vitest** and **React Testing Library** with a 100% test pass rate across **71 test cases in 6 test suites**:
+Automated tests were written using **Vitest** and **React Testing Library** with a 100% test pass rate across **89 test cases in 8 test suites**:
 
 ```text
  ✓ src/test/calculations.test.ts (9 tests)
@@ -122,19 +122,22 @@ Automated tests were written using **Vitest** and **React Testing Library** with
  ✓ src/test/geoBoundaries.test.ts (13 tests)
  ✓ src/test/aggregation.test.ts (7 tests)
  ✓ src/test/formatters.test.ts (16 tests)
+ ✓ src/test/locationService.test.ts (9 tests)
+ ✓ src/test/locationWorkflow.test.tsx (9 tests)
  ✓ src/test/components.test.tsx (7 tests)
 
- Test Files: 6 passed (6) | Tests: 71 passed (71) | Duration: 873ms
- Linter: oxlint -> 0 warnings, 0 errors (28 files)
- Build:  tsc -b && vite build -> SUCCESS (0 errors, 159ms)
+ Test Files: 8 passed (8) | Tests: 89 passed (89) | Duration: 864ms
+ Linter: oxlint -> 0 warnings, 0 errors (32 files)
+ Build:  tsc -b && vite build -> SUCCESS (0 errors, 181ms)
 ```
 
 ### Verified Test Scope:
-1. **India Polygon Accuracy:** Tested inclusion of Delhi, Mumbai, Kutch, Assam, Andaman & Nicobar, Lakshadweep; verified exclusion of Mid-Indian Ridge, Pakistan, Nepal, Tibet, and Sri Lanka.
-2. **Asia Polygon Accuracy:** Tested inclusion of Tokyo, Jakarta, Tehran, Ankara, Tashkent, Delhi, Manila; verified exclusion of California, Iceland, Chile, Australia, and UK.
-3. **API Serialization:** Verified starttime, endtime, min/max magnitude, limit, orderby, and bounding box parameters (`minlatitude`, `maxlatitude`, `minlongitude`, `maxlongitude`).
-4. **Resilience:** Verified graceful handling of missing/NaN coordinates, null magnitudes, HTTP 503 errors, and retention of stale cache.
-5. **UI & KPI Consistency:** Verified that FilterBar, Map viewport, Table, and KPIs update in unison upon region switching.
+1. **Location Resolution & Aliases:** Tested UK ('UK', 'Great Britain', 'England', 'Scotland', 'GB'), USA ('USA', 'US', 'America', 'United States'), Indonesia ('Indonesia', 'ID', 'Sumatra', 'Java'), India ('India', 'IN', 'Bharat'), Japan ('Japan', 'JP', 'Tokyo'), and California.
+2. **Zero-Result State & Actionable Guidance:** Tested verified message rendering (`"No recorded earthquakes match your current filters in United Kingdom during the selected period."`) and action triggers (Expand to 30 Days, Lower Min Mag to 1.0+).
+3. **Map Navigation Synchronization:** Tested map bounds fitting and center panning when countries are selected, including when 0 events match.
+4. **Boundary Inclusion & Exclusion:** Tested inclusion of UK, USA, Indonesia, India, and exclusion of external territories (France from UK, Mexico/Canada from USA, Australia from Indonesia, Mid-Indian Ridge from India).
+5. **API Serialization & Telemetry:** Verified starttime, endtime, min/max magnitude, limit, orderby, and bounding box parameters (`minlatitude`, `maxlatitude`, `minlongitude`, `maxlongitude`).
+6. **Resilience & Accuracy:** Verified handling of missing/NaN coordinates, null magnitudes, HTTP errors, stale cache retention, and description keyword searches.
 
 ---
 
@@ -143,10 +146,12 @@ Automated tests were written using **Vitest** and **React Testing Library** with
 | Domain | Status | Evidence / Notes |
 | :--- | :--- | :--- |
 | **USGS API Integration** | **Verified** | Live HTTP queries validated against official USGS FDSN Web Service. |
-| **Geographic Polygon Engine** | **Verified** | 13/13 dedicated boundary tests passing; Mid-Indian Ridge rejected. |
+| **Location Detection & Autocomplete**| **Verified** | 50+ countries/regions/cities with aliases and debounced autocomplete. |
+| **Geographic Polygon Engine** | **Verified** | Verified boundary tests passing; Mid-Indian Ridge and cross-border noise rejected. |
+| **Zero-Results Handling** | **Verified** | Informative non-alarmist message with next-step actions; map navigates accurately. |
 | **Statistical Calculations** | **Verified** | Verified against manual mathematical calculations and automated tests. |
-| **Non-Predictive Scientific Clarity**| **Verified** | Prominently stated across Header, FilterBar, and KPI cards. |
-| **Automated Test Suite** | **Verified** | 71/71 passing tests across 6 test suites with jsdom environment. |
+| **Non-Predictive Scientific Clarity**| **Verified** | Prominently stated across Header, FilterBar, LocationPanel, and KPI cards. |
+| **Automated Test Suite** | **Verified** | 89/89 passing tests across 8 test suites with jsdom environment. |
 | **Static Analysis & Build** | **Verified** | 0 lint errors (`oxlint`), 0 TypeScript errors (`tsc -b`), clean Vite bundle. |
 | **Remote Host CI/CD** | **Pending** | Dependent on candidate remote git repository setup. |
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
-import type { EarthquakeEvent, RegionPreset } from '../../types/earthquake';
+import type { EarthquakeEvent, RegionPreset, ResolvedLocation } from '../../types/earthquake';
 import { formatMagnitude, formatDepth, formatUtcDateTime, getMagnitudeColor } from '../../utils/formatters';
 import { getRegionViewport } from '../../utils/geoBoundaries';
 import { MapLegend } from './MapLegend';
@@ -12,6 +12,7 @@ interface EarthquakeMapProps {
   onSelectEvent: (event: EarthquakeEvent) => void;
   isLoading: boolean;
   region: RegionPreset;
+  selectedLocation?: ResolvedLocation | null;
 }
 
 export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
@@ -20,6 +21,7 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   onSelectEvent,
   isLoading,
   region,
+  selectedLocation,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -202,9 +204,46 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
     }
   }, [selectedEvent]);
 
-  // Shift map view when region selector or events change
+  // Shift map view when location selector, region selector, or events change
   useEffect(() => {
     if (!mapInstanceRef.current) return;
+
+    // 1. If a specific country, region, or city is selected
+    if (selectedLocation) {
+      const validCoords = events
+        .filter((e) => e.coordinates !== null)
+        .map((e) => [e.coordinates!.latitude, e.coordinates!.longitude] as [number, number]);
+
+      if (validCoords.length > 0) {
+        const bounds = L.latLngBounds(validCoords);
+        if (bounds.isValid()) {
+          mapInstanceRef.current.fitBounds(bounds, {
+            padding: [40, 40],
+            maxZoom: Math.max(selectedLocation.zoom + 2, 7),
+            animate: true,
+          });
+          return;
+        }
+      }
+
+      // If no events match in this location (zero-result state), the map STILL navigates to that location!
+      const locBounds = L.latLngBounds(
+        [selectedLocation.bounds.minlatitude, selectedLocation.bounds.minlongitude],
+        [selectedLocation.bounds.maxlatitude, selectedLocation.bounds.maxlongitude]
+      );
+      if (locBounds.isValid() && selectedLocation.bounds.minlongitude <= selectedLocation.bounds.maxlongitude) {
+        mapInstanceRef.current.fitBounds(locBounds, {
+          padding: [30, 30],
+          maxZoom: selectedLocation.zoom,
+          animate: true,
+        });
+      } else {
+        mapInstanceRef.current.flyTo(selectedLocation.center, selectedLocation.zoom, { duration: 1.0 });
+      }
+      return;
+    }
+
+    // 2. Default regional presets (Global / Asia / India)
     const vp = getRegionViewport(region);
 
     const validCoords = events
@@ -220,13 +259,17 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
     }
 
     mapInstanceRef.current.flyTo(vp.center, vp.zoom, { duration: 1.0 });
-  }, [region, events]);
+  }, [selectedLocation, region, events]);
 
   const handleResetView = useCallback(() => {
     if (!mapInstanceRef.current) return;
+    if (selectedLocation) {
+      mapInstanceRef.current.flyTo(selectedLocation.center, selectedLocation.zoom, { duration: 0.8 });
+      return;
+    }
     const vp = getRegionViewport(region);
     mapInstanceRef.current.flyTo(vp.center, vp.zoom, { duration: 0.8 });
-  }, [region]);
+  }, [selectedLocation, region]);
 
   const handleFitBounds = useCallback(() => {
     if (!mapInstanceRef.current || events.length === 0) return;
@@ -249,8 +292,14 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
       {/* Map Header Toolbar */}
       <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2">
         <div className="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-200 flex items-center gap-2 shadow-lg">
-          <Globe className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-semibold capitalize">{region} Seismic Map</span>
+          {selectedLocation ? (
+            <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+          ) : (
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+          )}
+          <span className="font-semibold capitalize">
+            {selectedLocation ? `${selectedLocation.name} Seismicity Map` : `${region} Seismic Map`}
+          </span>
           <span className="text-[11px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono">
             {plottedCount} plotted
           </span>
@@ -266,7 +315,11 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
         {plottedCount === 0 && (
           <div className="bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-800 text-[11px] text-slate-400 flex items-center gap-1.5 shadow-lg">
             <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span>No recorded events in {region} for current filters</span>
+            <span>
+              {selectedLocation
+                ? `No recorded events in ${selectedLocation.name} for current filters`
+                : `No recorded events in ${region} for current filters`}
+            </span>
           </div>
         )}
       </div>

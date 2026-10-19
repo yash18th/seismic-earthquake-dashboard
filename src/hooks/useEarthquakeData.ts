@@ -47,7 +47,10 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
       filterState.customEndTime
     );
 
-    const bbox = getRegionBoundingBox(filterState.region);
+    // If a specific country/region/city is selected, use its geographic bounding box
+    const bbox = filterState.selectedLocation
+      ? filterState.selectedLocation.bounds
+      : getRegionBoundingBox(filterState.region);
 
     return {
       format: 'geojson',
@@ -63,6 +66,7 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
       orderby: 'time',
     };
   }, [
+    filterState.selectedLocation,
     filterState.region,
     filterState.timePreset,
     filterState.customStartTime,

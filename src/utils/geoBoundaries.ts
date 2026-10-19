@@ -1,4 +1,4 @@
-import type { EarthquakeEvent, RegionPreset } from '../types/earthquake';
+import type { EarthquakeEvent, RegionPreset, ResolvedLocation } from '../types/earthquake';
 
 /**
  * Point-in-polygon ray-casting test.
@@ -230,6 +230,102 @@ export function getRegionBoundingBox(
     case 'global':
     default:
       return null;
+  }
+}
+
+/**
+ * Checks whether an earthquake event's epicenter falls within a specific resolved geographic location.
+ * Respects exact polygons (India, etc.), bounding boxes, and handles antimeridian crossings.
+ */
+/**
+ * Checks whether an event falls within USA territory (CONUS, Alaska, Hawaii, Puerto Rico).
+ * Excludes Canada (Vancouver, Alberta, Ontario) and Mexico.
+ */
+export function isEventInUSA(event: EarthquakeEvent): boolean {
+  if (!event.coordinates) return false;
+  const { latitude, longitude } = event.coordinates;
+  if (
+    typeof latitude !== 'number' ||
+    typeof longitude !== 'number' ||
+    isNaN(latitude) ||
+    isNaN(longitude)
+  ) {
+    return false;
+  }
+
+  // Check CONUS (Continental US): south of 49.0° N (US-Canada border)
+  const isConus =
+    latitude >= 24.5 &&
+    latitude <= 49.0 &&
+    longitude >= -125.0 &&
+    longitude <= -66.5;
+
+  // Check Alaska: north of 51.0° N, west of 141° W (Yukon border) + Panhandle
+  const isAlaska =
+    latitude >= 51.0 &&
+    latitude <= 71.5 &&
+    (longitude >= -179.0 && longitude <= -141.0 ||
+      (latitude <= 60.5 && longitude >= -141.0 && longitude <= -130.0));
+
+  // Check Hawaii
+  const isHawaii =
+    latitude >= 18.5 &&
+    latitude <= 22.5 &&
+    longitude >= -160.5 &&
+    longitude <= -154.5;
+
+  // Check Puerto Rico & US Virgin Islands
+  const isPuertoRico =
+    latitude >= 17.5 &&
+    latitude <= 18.6 &&
+    longitude >= -67.5 &&
+    longitude <= -64.5;
+
+  return isConus || isAlaska || isHawaii || isPuertoRico;
+}
+
+/**
+ * Checks whether an earthquake event's epicenter falls within a specific resolved geographic location.
+ * Respects exact polygons (India, etc.), bounding boxes, and handles antimeridian crossings.
+ */
+export function isEventInLocation(event: EarthquakeEvent, location: ResolvedLocation): boolean {
+  if (!event.coordinates) return false;
+  const { latitude, longitude } = event.coordinates;
+  if (
+    typeof latitude !== 'number' ||
+    typeof longitude !== 'number' ||
+    isNaN(latitude) ||
+    isNaN(longitude)
+  ) {
+    return false;
+  }
+
+  // Exact territorial test for India (excludes Mid-Indian Ridge and bordering states)
+  if (location.id === 'IN') {
+    return isEventInIndia(event);
+  }
+
+  // Exact territorial test for USA (excludes Canada and Mexico)
+  if (location.id === 'US') {
+    return isEventInUSA(event);
+  }
+
+  // If a verified polygon is supplied, test against it
+  if (location.polygon && location.polygon.length > 2) {
+    return isPointInPolygon(latitude, longitude, location.polygon);
+  }
+
+  // Bounding box evaluation with antimeridian (international date line) support
+  const { minlatitude, maxlatitude, minlongitude, maxlongitude } = location.bounds;
+
+  const latMatch = latitude >= minlatitude && latitude <= maxlatitude;
+  if (!latMatch) return false;
+
+  if (minlongitude <= maxlongitude) {
+    return longitude >= minlongitude && longitude <= maxlongitude;
+  } else {
+    // Crosses 180° meridian (e.g. 170° to -170°)
+    return longitude >= minlongitude || longitude <= maxlongitude;
   }
 }
 

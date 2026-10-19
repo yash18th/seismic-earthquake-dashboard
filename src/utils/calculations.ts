@@ -1,6 +1,6 @@
-import type { EarthquakeEvent, DashboardKpis, RegionPreset } from '../types/earthquake';
+import type { EarthquakeEvent, DashboardKpis, RegionPreset, ResolvedLocation } from '../types/earthquake';
 import { SIGNIFICANT_MAGNITUDE_THRESHOLD } from './formatters';
-import { isEventInRegion } from './geoBoundaries';
+import { isEventInRegion, isEventInLocation } from './geoBoundaries';
 
 /**
  * Calculate KPI metrics from the currently filtered earthquake records.
@@ -73,15 +73,30 @@ export function calculateKpis(
   };
 }
 
+
 /**
- * Filter events by geographic region boundary.
+ * Filter events by geographic region boundary or selected resolved location.
+ */
+export function filterEventsByLocationOrRegion(
+  events: EarthquakeEvent[],
+  region: RegionPreset = 'global',
+  selectedLocation?: ResolvedLocation | null
+): EarthquakeEvent[] {
+  if (selectedLocation) {
+    return events.filter((ev) => isEventInLocation(ev, selectedLocation));
+  }
+  if (region === 'global') return events;
+  return events.filter((ev) => isEventInRegion(ev, region));
+}
+
+/**
+ * Filter events by geographic region boundary (backward compatible).
  */
 export function filterEventsByRegion(
   events: EarthquakeEvent[],
   region: RegionPreset = 'global'
 ): EarthquakeEvent[] {
-  if (region === 'global') return events;
-  return events.filter((ev) => isEventInRegion(ev, region));
+  return filterEventsByLocationOrRegion(events, region, null);
 }
 
 /**
@@ -96,23 +111,36 @@ export function filterAndSortEvents(
   sortBy: 'newest' | 'oldest' | 'strongest' | 'weakest',
   significantOnly: boolean = false,
   region: RegionPreset = 'global',
+  selectedLocation?: ResolvedLocation | null,
   significantThreshold: number = SIGNIFICANT_MAGNITUDE_THRESHOLD
 ): EarthquakeEvent[] {
   const query = searchQuery.trim().toLowerCase();
 
   const filtered = events.filter((ev) => {
-    // 1. Geographic boundary test (prevents "Mid-Indian Ridge" matching India)
-    if (!isEventInRegion(ev, region)) {
+    // 1. Geographic boundary test (location or region)
+    if (selectedLocation) {
+      if (!isEventInLocation(ev, selectedLocation)) {
+        return false;
+      }
+    } else if (!isEventInRegion(ev, region)) {
       return false;
     }
 
-    // 2. Client-side text search by place, title, or ID
+    // 2. Client-side text search (when query is not just the location name itself)
     if (query) {
-      const matchPlace = ev.place.toLowerCase().includes(query);
-      const matchTitle = ev.title.toLowerCase().includes(query);
-      const matchId = ev.id.toLowerCase().includes(query);
-      if (!matchPlace && !matchTitle && !matchId) {
-        return false;
+      const isLocationName =
+        selectedLocation &&
+        (selectedLocation.name.toLowerCase() === query ||
+          selectedLocation.id.toLowerCase() === query ||
+          selectedLocation.aliases?.some((a) => a.toLowerCase() === query));
+
+      if (!isLocationName) {
+        const matchPlace = ev.place.toLowerCase().includes(query);
+        const matchTitle = ev.title.toLowerCase().includes(query);
+        const matchId = ev.id.toLowerCase().includes(query);
+        if (!matchPlace && !matchTitle && !matchId) {
+          return false;
+        }
       }
     }
 
@@ -133,6 +161,59 @@ export function filterAndSortEvents(
   });
 
   return sortEvents(filtered, sortBy);
+}
+
+export interface LocationStats {
+  totalCount: number;
+  strongestEvent: EarthquakeEvent | null;
+  mostRecentEvent: EarthquakeEvent | null;
+  averageMagnitude: number | null;
+}
+
+/**
+ * Calculates focused summary statistics for a selected location and filtered event set.
+ */
+export function calculateLocationStats(events: EarthquakeEvent[]): LocationStats {
+  if (!events || events.length === 0) {
+    return {
+      totalCount: 0,
+      strongestEvent: null,
+      mostRecentEvent: null,
+      averageMagnitude: null,
+    };
+  }
+
+  let strongestEvent: EarthquakeEvent | null = null;
+  let mostRecentEvent: EarthquakeEvent | null = null;
+  let magSum = 0;
+  let validMagCount = 0;
+
+  for (const ev of events) {
+    // Check most recent by origin time
+    if (!mostRecentEvent || ev.time > mostRecentEvent.time) {
+      mostRecentEvent = ev;
+    }
+
+    // Check strongest by magnitude
+    if (ev.magnitude !== null && !isNaN(ev.magnitude)) {
+      validMagCount++;
+      magSum += ev.magnitude;
+
+      if (!strongestEvent || ev.magnitude > (strongestEvent.magnitude ?? -Infinity)) {
+        strongestEvent = ev;
+      }
+    }
+  }
+
+  const averageMagnitude =
+    validMagCount > 0 ? Number((magSum / validMagCount).toFixed(2)) : null;
+
+  return {
+    totalCount: events.length,
+    strongestEvent,
+    mostRecentEvent,
+    averageMagnitude,
+  };
 }
 
 /**

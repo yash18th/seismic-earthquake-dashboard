@@ -112,6 +112,7 @@ describe('Dashboard Component Unit Tests', () => {
         <FilterBar
           filterState={{
             region: 'global',
+            selectedLocation: null,
             timePreset: '24h',
             customStartTime: '',
             customEndTime: '',
@@ -124,9 +125,11 @@ describe('Dashboard Component Unit Tests', () => {
           }}
           onFilterChange={handleFilterChange}
           onResetFilters={handleReset}
+          onSelectLocation={vi.fn()}
           apiCount={100}
           geoMatchCount={35}
           displayedCount={20}
+          plottedCount={18}
           isLoading={false}
         />
       );
@@ -137,6 +140,7 @@ describe('Dashboard Component Unit Tests', () => {
       expect(screen.getByText('100')).toBeInTheDocument();
       expect(screen.getByText('35')).toBeInTheDocument();
       expect(screen.getByText('20')).toBeInTheDocument();
+      expect(screen.getByText('18')).toBeInTheDocument();
 
       // Click India region button
       const indiaBtn = screen.getByRole('button', { name: 'India' });
