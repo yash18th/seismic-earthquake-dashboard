@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Earthquake Dashboard: LLM Usage and Verification Report</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 14mm 10mm 14mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: "Georgia", "Times New Roman", serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.28;
+      font-size: 8.4pt;
+      -webkit-font-smoothing: antialiased;
+    }
+    .header {
+      margin-bottom: 7px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #0f172a;
+    }
+    h1 {
+      font-size: 15.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 3px;
+    }
+    .subtitle {
+      font-size: 8.6pt;
+      color: #475569;
+      margin-bottom: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .meta {
+      font-size: 7.8pt;
+      color: #334155;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .meta strong {
+      color: #0f172a;
+    }
+    .section {
+      margin-bottom: 6.5px;
+    }
+    .section-title {
+      font-size: 9.8pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 2.5px;
+      letter-spacing: -0.01em;
+      border-bottom: 0.5px solid #cbd5e1;
+      padding-bottom: 1px;
+    }
+    p {
+      margin-bottom: 2.5px;
+      text-align: justify;
+    }
+    ul {
+      list-style-type: disc;
+      padding-left: 14px;
+      margin-bottom: 2px;
+    }
+    li {
+      margin-bottom: 1.5px;
+      text-align: justify;
+    }
+    strong {
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-block;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 7.2pt;
+      font-weight: 700;
+      padding: 0.5px 4px;
+      border-radius: 2px;
+      background: #0f172a;
+      color: #ffffff;
+      margin-right: 2px;
+      vertical-align: middle;
+    }
+    .badge-pass {
+      background: #047857;
+    }
+    .mono {
+      font-family: "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 7.6pt;
+      color: #0f172a;
+      background: #f1f5f9;
+      padding: 0.5px 2.5px;
+      border-radius: 2px;
+    }
+    .conclusion-box {
+      background: #f8fafc;
+      border-left: 2.5px solid #0f172a;
+      padding: 4px 7px;
+      margin-top: 4px;
+      margin-bottom: 3px;
+    }
+    .footer {
+      font-size: 6.8pt;
+      color: #64748b;
+      text-align: center;
+      margin-top: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h1>Earthquake Dashboard: LLM Usage and Verification Report</h1>
+    <div class="subtitle">Development process for a dashboard built on the public USGS Earthquake API.</div>
+    <div class="meta">
+      <strong>Author:</strong> Yashvanth Nayak S &nbsp;·&nbsp;
+      <strong>Project:</strong> SEISMIC Intelligence Dashboard &nbsp;·&nbsp;
+      <strong>Date:</strong> October 19, 2026
+    </div>
+  </header>
+
+  <section class="section">
+    <h2 class="section-title">1. LLM Usage</h2>
+    <p>
+      <strong>Google Antigravity (Gemini 3.8 Flash Medium)</strong> and <strong>OpenAI ChatGPT</strong> were used collaboratively during development, each for distinct responsibilities:
+    </p>
+    <ul>
+      <li><strong>Antigravity (Gemini 3.8 Flash Medium):</strong> Served as the primary autonomous implementation assistant. Executed end-to-end fullstack development in React 19, TypeScript, and Vite; engineered the geodetic ray-casting boundary engine (<span class="mono">isPointInPolygon</span>) for India and island territories; built Leaflet mapping with OpenStreetMap tiles and magnitude-scaled markers; implemented Recharts hourly frequency and magnitude histogram pipelines; configured <span class="mono">AbortController</span> for stale query cancellation; authored the 89-test Vitest suite; and performed static code verification.</li>
+      <li><strong>ChatGPT:</strong> Assisted during initial project planning, decomposing assignment criteria into an actionable engineering checklist, structuring the 4-row filter layout strategy, and reviewing high-level UI/UX and non-predictive scientific messaging.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">2. Prompting Approach</h2>
+    <p>
+      Development instructions were structured into modular, test-driven engineering milestones rather than a single ambiguous prompt:
+    </p>
+    <ul>
+      <li><strong>Core Integration:</strong> Query the official USGS FDSN Web Service directly using authentic GeoJSON feeds (no synthetic/mock data).</li>
+      <li><strong>Telemetry Display:</strong> Present magnitude, location place, hypocenter depth, UTC origin time, sensor status badges, and synchronized KPIs (total count, peak magnitude, average magnitude excluding nulls, shallow focus, and tsunami warnings).</li>
+      <li><strong>Interactive Analytics:</strong> Render an interactive world map with dynamic circle markers, hourly activity timelines, energy bins, and an event catalog with a synchronized slide-over telemetry drawer.</li>
+      <li><strong>Geospatial Intelligence:</strong> Resolve countries (India, USA, UK, Indonesia) with autocomplete and automatic viewport navigation, using strict geodetic boundaries to prevent false-positive inclusions.</li>
+      <li><strong>Error Resilience:</strong> Handle loading overlays, network error retries with stale-data retention, and actionable empty states.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">3. Verification Against the USGS API</h2>
+    <p>
+      The dashboard was verified against live USGS telemetry on <strong>October 19, 2026</strong> using the official endpoint:
+    </p>
+    <ul>
+      <li><strong>Endpoint &amp; Query:</strong> <span class="mono">https://earthquake.usgs.gov/fdsnws/event/1/query</span> with parameters <span class="mono">format=geojson</span>, <span class="mono">starttime</span>, <span class="mono">endtime</span>, <span class="mono">minmagnitude</span>, <span class="mono">maxmagnitude</span>, <span class="mono">minlatitude</span>, <span class="mono">maxlatitude</span>, <span class="mono">minlongitude</span>, <span class="mono">maxlongitude</span>, <span class="mono">limit=500</span>, and <span class="mono">orderby=time</span>.</li>
+      <li><strong>Sampled Records:</strong> 47 real earthquakes from a 24-hour UTC window (<span class="mono">M &ge; 2.5</span>) and live endpoint pings (<span class="mono">ci41349399</span>, M 0.72) were inspected and compared against dashboard state.</li>
+      <li><strong>Field Parity:</strong> Event ID, magnitude, location string, depth in km (handling authentic negative mountain summit depths), UTC origin timestamps, and official event URLs (<span class="mono">earthquake.usgs.gov/earthquakes/eventpage/{id}</span>) showed <strong>0 deviation</strong>.</li>
+      <li><strong>Count Consistency:</strong> API feature count (47) &rarr; regional spatial matches (47) &rarr; displayed count (47) &rarr; map plotted markers (47).</li>
+      <li><strong>Verification Outcome:</strong> <span class="badge badge-pass">PASS</span> <strong>Fully Verified (0 discrepancies).</strong> Structure, coordinates, depth units, and event links match real USGS data.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">4. Clarity and Writing Quality</h2>
+    <p>
+      Confirmed interface and codebase refinements implemented in the active project:
+    </p>
+    <ul>
+      <li><strong>Organized 4-Row Filter Bar:</strong> Grouped into (1) Location Search/Region/Sort, (2) Time presets (1h, 24h, 7d, 30d, custom UTC), (3) Magnitude bounds with an explicit significant toggle (<span class="mono">M &ge; 4.5</span>), and (4) Four-tier result counters.</li>
+      <li><strong>Actionable Zero-Result Guidance:</strong> When no events match active filters (e.g., UK in 24h), the map still centers on the country and presents recovery buttons (<em>"Expand to Past 30 Days"</em>, <em>"Lower Min Mag to 1.0+"</em>) instead of a broken screen.</li>
+      <li><strong>Telemetry Slide-Over Drawer:</strong> Synchronized across map markers and table rows, displaying exact coordinates, human-reviewed vs. automatic sensor badges, and one-click event ID copying.</li>
+      <li><strong>Engineering Rigor:</strong> 89 automated tests (100% passing) and 0 lint warnings (<span class="mono">oxlint</span>) ensure maintainability and scientific consistency.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">5. Limitations and Corrections</h2>
+    <ul>
+      <li><strong>Mid-Indian Ridge False Positives:</strong> Naive string matching for "India" returned earthquakes from the Mid-Indian Ridge (-10&deg; S to -45&deg; S) in the southern Indian Ocean. Corrected via point-in-polygon ray-casting bounding mainland India, Andaman &amp; Nicobar, and Lakshadweep.</li>
+      <li><strong>Negative Hypocenter Depths:</strong> Volcanic and mountain summit quakes (e.g., Mauna Kea) have negative depths above sea level. Initially risked rejection as corrupted data; corrected to preserve negative depths and classify them as shallow focus (&lt;70 km).</li>
+      <li><strong>Zero-Event Map Viewports:</strong> Fixed map staying zoomed out when a selected country had zero active events by auto-navigating to the country's geodetic bounding box.</li>
+      <li><strong>Non-Predictive Science:</strong> Prominently disclosed across header, filters, and cards that the dashboard monitors <strong>retrospective recorded observations</strong> and does <strong>not predict future earthquakes</strong>.</li>
+    </ul>
+  </section>
+
+  <div class="conclusion-box">
+    <strong>Conclusion:</strong> AI tools accelerated architecture, boundary mathematics, and testing, but rigorous manual verification against authoritative USGS records was vital to eliminate synthetic data, enforce exact geodetic boundaries, and ensure complete scientific integrity.
+  </div>
+
+  <footer class="footer">
+    Official USGS Data Reference: USGS Earthquake Hazards Program FDSN Event Web Service (https://earthquake.usgs.gov/fdsnws/event/1/)
+  </footer>
+
+</body>
+</html>
