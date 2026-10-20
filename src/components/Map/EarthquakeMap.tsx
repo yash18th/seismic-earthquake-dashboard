@@ -11,6 +11,7 @@ interface EarthquakeMapProps {
   selectedEvent: EarthquakeEvent | null;
   onSelectEvent: (event: EarthquakeEvent) => void;
   isLoading: boolean;
+  isRefreshing?: boolean;
   region: RegionPreset;
   selectedLocation?: ResolvedLocation | null;
 }
@@ -20,6 +21,7 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
   selectedEvent,
   onSelectEvent,
   isLoading,
+  isRefreshing = false,
   region,
   selectedLocation,
 }) => {
@@ -372,12 +374,22 @@ export const EarthquakeMap: React.FC<EarthquakeMapProps> = ({
         </button>
       </div>
 
-      {/* Loading overlay */}
-      {isLoading && (
+      {/* Initial cold loading overlay (only when no data is loaded yet) */}
+      {isLoading && events.length === 0 && (
         <div className="absolute inset-0 z-30 bg-slate-950/60 backdrop-blur-[2px] flex items-center justify-center">
           <div className="flex items-center gap-2.5 px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-cyan-300 shadow-2xl">
             <span className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
             <span>Plotting seismic event telemetry...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Subtle non-blocking background refresh badge when map already has events */}
+      {(isRefreshing || (isLoading && events.length > 0)) && (
+        <div className="absolute top-14 left-3 z-20 pointer-events-none">
+          <div className="bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-md border border-cyan-800/60 text-[11px] text-cyan-300 flex items-center gap-1.5 shadow-lg">
+            <span className="w-2.5 h-2.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
+            <span>Syncing fresh telemetry...</span>
           </div>
         </div>
       )}

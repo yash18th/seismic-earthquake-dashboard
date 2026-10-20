@@ -8,6 +8,7 @@ import type {
 import { SIGNIFICANT_MAGNITUDE_THRESHOLD } from '../utils/formatters';
 
 export const USGS_API_BASE_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
+export const DEFAULT_REQUEST_TIMEOUT_MS = 10000; // 10s timeout to prevent unbounded hanging
 
 /**
  * Builds the URL and URLSearchParams for the USGS FDSN Web Service.
@@ -53,7 +54,8 @@ export function buildUsgsApiUrl(params: UsgsQueryParams): string {
 
 /**
  * Converts a time preset (1h, 24h, 7d, 30d) into starttime and endtime ISO strings.
- * Ensures the end time is current when a fresh request is constructed.
+ * Rounds preset timestamps to 30-second boundaries to prevent millisecond jitter
+ * and maximize browser/CDN HTTP caching.
  */
 export function calculateTimeWindow(
   preset: TimeRangePreset,
@@ -61,7 +63,6 @@ export function calculateTimeWindow(
   customEnd?: string
 ): { starttime: string; endtime: string } {
   const now = new Date();
-  const endtime = now.toISOString();
 
   if (preset === 'custom' && customStart && customEnd) {
     const startDate = new Date(customStart);
@@ -74,7 +75,12 @@ export function calculateTimeWindow(
     }
   }
 
-  const startDate = new Date(now.getTime());
+  // Round to nearest 30 seconds for presets to prevent microsecond jitter and maximize cache hits
+  const roundedNowMs = Math.floor(now.getTime() / 30000) * 30000;
+  const nowRounded = new Date(roundedNowMs);
+  const endtime = nowRounded.toISOString();
+
+  const startDate = new Date(nowRounded.getTime());
   switch (preset) {
     case '1h':
       startDate.setHours(startDate.getHours() - 1);
@@ -204,13 +210,38 @@ export function validateGeoJsonResponse(data: unknown): UsgsGeoJsonResponse {
  */
 export async function fetchEarthquakesFromUsgs(
   params: UsgsQueryParams,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  timeoutMs: number = DEFAULT_REQUEST_TIMEOUT_MS
 ): Promise<{
   events: EarthquakeEvent[];
   rawResponse: UsgsGeoJsonResponse;
   requestUrl: string;
 }> {
   const requestUrl = buildUsgsApiUrl(params);
+
+  // Compose caller's signal and our timeout signal
+  const internalController = new AbortController();
+  let timedOut = false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const onParentAbort = () => {
+    internalController.abort(signal?.reason);
+  };
+
+  if (signal) {
+    if (signal.aborted) {
+      internalController.abort(signal.reason);
+    } else {
+      signal.addEventListener('abort', onParentAbort);
+    }
+  }
+
+  if (timeoutMs > 0) {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      internalController.abort(new Error(`Request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  }
 
   let response: Response;
   try {
@@ -219,13 +250,27 @@ export async function fetchEarthquakesFromUsgs(
       headers: {
         Accept: 'application/json, application/geo+json',
       },
-      signal,
+      signal: internalController.signal,
     });
   } catch (err: unknown) {
+    if (timedOut) {
+      throw new Error(`USGS API request timed out after ${Math.round(timeoutMs / 1000)}s. Please check network connection.`);
+    }
+    if (signal?.aborted) {
+      const abortErr = new DOMException('The user aborted a request.', 'AbortError');
+      throw abortErr;
+    }
     if (err instanceof DOMException && err.name === 'AbortError') {
       throw err;
     }
     throw new Error(`Network failure connecting to USGS API: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    if (signal) {
+      signal.removeEventListener('abort', onParentAbort);
+    }
   }
 
   if (!response.ok) {

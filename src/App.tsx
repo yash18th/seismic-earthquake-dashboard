@@ -11,8 +11,11 @@ import { ChartsSection } from './components/Analytics/ChartsSection';
 import { EventTable } from './components/EventTable/EventTable';
 import { EventDetailPanel } from './components/EventDetails/EventDetailPanel';
 import { ErrorBanner } from './components/Common/ErrorBanner';
-import { AssignmentReportModal } from './components/AssignmentReportModal';
 import { ShieldCheck, Database } from 'lucide-react';
+
+const AssignmentReportModal = React.lazy(() =>
+  import('./components/AssignmentReportModal').then((m) => ({ default: m.AssignmentReportModal }))
+);
 
 const INITIAL_FILTER_STATE: DashboardFilterState = {
   region: 'global',
@@ -177,7 +180,7 @@ export const App: React.FC = () => {
           geoMatchCount={geoMatchedEvents.length}
           displayedCount={filteredEvents.length}
           plottedCount={plottedCount}
-          isLoading={isLoading}
+          isLoading={isLoading && events.length === 0}
         />
 
         {/* Location Detail Panel (Displayed when a country/region/city is selected) */}
@@ -201,6 +204,7 @@ export const App: React.FC = () => {
           selectedEvent={selectedEvent}
           onSelectEvent={handleSelectEvent}
           isLoading={isLoading}
+          isRefreshing={isRefreshing}
           region={filterState.region}
           selectedLocation={filterState.selectedLocation}
         />
@@ -230,13 +234,17 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Assignment Report Modal */}
-      <AssignmentReportModal
-        isOpen={isReportOpen}
-        onClose={() => setIsReportOpen(false)}
-        rawRequestUrl={rawRequestUrl}
-        totalRecordsLoaded={events.length}
-      />
+      {/* Assignment Report Modal (Code-split for performance) */}
+      <React.Suspense fallback={null}>
+        {isReportOpen && (
+          <AssignmentReportModal
+            isOpen={isReportOpen}
+            onClose={() => setIsReportOpen(false)}
+            rawRequestUrl={rawRequestUrl}
+            totalRecordsLoaded={events.length}
+          />
+        )}
+      </React.Suspense>
 
       {/* Professional Footer */}
       <footer className="border-t border-slate-800/80 bg-[#090e1a] text-slate-400 text-xs py-6 mt-12">

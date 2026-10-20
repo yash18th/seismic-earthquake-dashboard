@@ -6,6 +6,7 @@ import type {
 } from '../types/earthquake';
 import { fetchEarthquakesFromUsgs, calculateTimeWindow } from '../services/usgsApi';
 import { getRegionBoundingBox } from '../utils/geoBoundaries';
+import { cacheService } from '../services/cacheService';
 
 export interface UseEarthquakeDataReturn {
   events: EarthquakeEvent[];
@@ -24,20 +25,35 @@ export interface UseEarthquakeDataReturn {
 const POLLING_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 export function useEarthquakeData(filterState: DashboardFilterState): UseEarthquakeDataReturn {
-  const [events, setEvents] = useState<EarthquakeEvent[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  // Synchronous cache hydration on mount for instant (0ms) interface display
+  const initialCache = cacheService.getLatest();
+
+  const [events, setEvents] = useState<EarthquakeEvent[]>(() =>
+    initialCache ? initialCache.events : []
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(() => !initialCache);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(() => Boolean(initialCache));
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isStale, setIsStale] = useState<boolean>(false);
-  const [rawRequestUrl, setRawRequestUrl] = useState<string | null>(null);
-  const [totalApiFeaturesCount, setTotalApiFeaturesCount] = useState<number>(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(() =>
+    initialCache ? new Date(initialCache.timestamp) : null
+  );
+  const [isStale, setIsStale] = useState<boolean>(() =>
+    initialCache ? cacheService.isCacheStale(initialCache.timestamp) : false
+  );
+  const [rawRequestUrl, setRawRequestUrl] = useState<string | null>(() =>
+    initialCache ? initialCache.rawRequestUrl : null
+  );
+  const [totalApiFeaturesCount, setTotalApiFeaturesCount] = useState<number>(() =>
+    initialCache ? initialCache.totalFeatures : 0
+  );
   const [pollingEnabled, setPollingEnabled] = useState<boolean>(false);
 
   // Keep track of active AbortController to cancel stale/superseded requests
   const abortControllerRef = useRef<AbortController | null>(null);
   // Keep track of in-flight requests to prevent duplicate overlapping fetches
   const inFlightRef = useRef<boolean>(false);
+  // Monotonically increasing request ID to guard against StrictMode and async race conditions
+  const requestIdRef = useRef<number>(0);
 
   // Build current query params based on filter state
   const buildCurrentQueryParams = useCallback((): UsgsQueryParams => {
@@ -78,7 +94,7 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
 
   const loadData = useCallback(
     async (isManualRefresh: boolean = false) => {
-      // If an existing request is active, cancel it before starting a new one
+      // Abort any existing active network request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -86,20 +102,56 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      const currentRequestId = ++requestIdRef.current;
       inFlightRef.current = true;
-      if (isManualRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading((prev) => (!prev ? true : prev));
-      }
 
       const params = buildCurrentQueryParams();
+      const paramsKey = cacheService.generateKey(params as unknown as Record<string, unknown>);
+
+      // Check if we have cached data for these exact parameters
+      const cached = cacheService.get(paramsKey);
+      if (cached) {
+        // Hydrate from cache immediately
+        setEvents(cached.events);
+        setTotalApiFeaturesCount(cached.totalFeatures);
+        setRawRequestUrl(cached.rawRequestUrl);
+        setLastUpdated(new Date(cached.timestamp));
+        setIsStale(cacheService.isCacheStale(cached.timestamp));
+        setIsLoading(false);
+
+        // If the cache is fresh (< 2 mins) and not a manual refresh, do not hit network
+        if (!isManualRefresh && !cacheService.isCacheStale(cached.timestamp)) {
+          setIsRefreshing(false);
+          inFlightRef.current = false;
+          return;
+        }
+      }
+
+      // If we already have events on screen (from cache or previous query), do background refresh
+      setEvents((currentEvents) => {
+        if (currentEvents.length > 0 || cached) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+        }
+        return currentEvents;
+      });
 
       try {
         const { events: fetchedEvents, rawResponse, requestUrl } =
           await fetchEarthquakesFromUsgs(params, controller.signal);
 
-        // Success: update data and mark not stale
+        // Discard superseded requests
+        if (currentRequestId !== requestIdRef.current) return;
+
+        // Persist to local & memory cache
+        cacheService.set(paramsKey, {
+          events: fetchedEvents,
+          totalFeatures: rawResponse.features.length,
+          rawRequestUrl: requestUrl,
+        });
+
+        // Update state with fresh data
         setEvents(fetchedEvents);
         setTotalApiFeaturesCount(rawResponse.features.length);
         setRawRequestUrl(requestUrl);
@@ -107,10 +159,9 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
         setError(null);
         setIsStale(false);
       } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          // Request was aborted by newer request; do not update error state
-          return;
-        }
+        // If aborted by user or superseded by newer request, quietly exit
+        if (currentRequestId !== requestIdRef.current) return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
 
         const errorMessage = err instanceof Error ? err.message : 'Unknown network failure occurred.';
         setError(errorMessage);
@@ -124,9 +175,11 @@ export function useEarthquakeData(filterState: DashboardFilterState): UseEarthqu
           return [];
         });
       } finally {
-        inFlightRef.current = false;
-        setIsLoading(false);
-        setIsRefreshing(false);
+        if (currentRequestId === requestIdRef.current) {
+          inFlightRef.current = false;
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
       }
     },
     [buildCurrentQueryParams]
